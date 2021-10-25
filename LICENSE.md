@@ -1,4 +1,4 @@
-Copyright 2021
+Copyright 2021 Johannes Klicpera, Chandan Yeshwanth
 
 Hippocratic License Version Number: 2.1.
 
