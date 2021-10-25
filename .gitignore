@@ -1,0 +1,14 @@
+logs/
+
+# Jupyter
+.ipynb_checkpoints
+
+# VS Code
+.vscode
+
+# Python
+__pycache__
+*.pyc
+
+# pytest
+.pytest_cache
