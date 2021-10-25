@@ -1,62 +1,87 @@
->📋  A template README.md for code accompanying a Machine Learning paper
+# Directional Message Passing on Molecular Graphs via Synthetic Coordinates
 
-# My Paper Title
+This repository is the official implementation of [Directional Message Passing on Molecular Graphs via Synthetic Coordinates](https://openreview.net/forum?id=ZRu0_3azrCd). 
 
-This repository is the official implementation of [My Paper Title](https://arxiv.org/abs/2030.12345). 
+by Johannes Klicpera, Chandan Yeshwanth, Stephan Günnemann  
+Published at NeurIPS 2021.
 
->📋  Optional: include a graphic explaining your approach/main result, bibtex entry, link to demos, blog posts and tutorials
+The `deepergcn_smp` folder contains DeeperGCN and SMP implementations in torch, and 
+`dimenetpp` contains the Tensorflow implementation of Dimenet++.
 
 ## Requirements
 
-To install requirements:
-
-```setup
-pip install -r requirements.txt
+Create a conda environment with Python 3.7 and install the requirements
+```
+conda env create -f environment.yml
 ```
 
->📋  Describe how to set up the environment, e.g. pip/conda/docker commands, download datasets, etc...
+### Datasets
+First set the `DATA_PATH` for all datasets in `deepergcn_smp/icgnn/data_utils/data.py`.
+We use the `ogbg-molhiv` and `ZINC` datasets from [Pytorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/) which are automatically downloaded.
+The QM9 dataset is provided in the `datasets` folder. 
 
 ## Training
-
-To train the model(s) in the paper, run this command:
-
-```train
-python train.py --input-data <path_to_data> --alpha 10 --beta 20
+Reference training scripts with the best hyperparameters are included
+### DeeperGCN and SMP
+The model: `deepergcn` and `smp` can be configured in the script, as well as
+the dataset: `ogbg-molhiv`, `QM9`, `ZINC`.
+```
+cd deepergcn_smp/
+python scripts/train.py
 ```
 
->📋  Describe how to train the models, with example commands on how to train the models in your paper, including the full training procedure and appropriate hyperparameters.
+### DimeNet++
+The model parameters and ablations can be configured in the training script. 
+```
+cd dimenetpp
+python run.py
+```
+
+### Training with SEML
+Alternately, use the config file to train with [SEML](https://github.com/TUM-DAML/seml) on a Slurm cluster.
+
+```
+seml <collection> add configs/graph_clsreg.yml
+seml <collection> start
+```
 
 ## Evaluation
+### DeeperGCN and SMP
+The model is evaluated on the validation set during training, and the final test
+score is printed at the end of training. Logs with losses and metrics are written to Tensorboard,
+the unique experiment ID is printed to console.
 
-To evaluate my model on ImageNet, run:
-
-```eval
-python eval.py --model-file mymodel.pth --benchmark imagenet
-```
-
->📋  Describe how to evaluate the trained models on benchmarks reported in the paper, give commands that produce the results (section below).
+### DimeNet++
+Checkpoints are saved to a uniquely named folder, this unique name is printed 
+during training and can be used in the `predict.ipynb` notebook to run 
+on the test set. The model configuration as used during training must be specified in `config_pp.yaml`. The same unique name can be used to view losses
+and metrics in Tensorboard.
 
 ## Pre-trained Models
 
-You can download pretrained models here:
-
-- [My awesome model](https://drive.google.com/mymodel.pth) trained on ImageNet using parameters x,y,z. 
-
->📋  Give a link to where/how the pretrained models can be downloaded and how they were trained (if applicable).  Alternatively you can have an additional column in your results table with a link to the models.
+Pretrained models will be added soon.
 
 ## Results
 
-Our model achieves the following performance on :
+Our models achieve the following results as reported in the paper
 
-### [Image Classification on ImageNet](https://paperswithcode.com/sota/image-classification-on-imagenet)
+### ogbg-molhiv
+| Model         |  Accuracy |
+| ------------------ | -------------- |
+| DeeperGCN   |          0.7674 +-0.0162       |
 
-| Model name         | Top 1 Accuracy  | Top 5 Accuracy |
-| ------------------ |---------------- | -------------- |
-| My awesome model   |     85%         |      95%       |
+### ZINC
+| Model         |  MAE |
+| ------------------ | -------------- |
+| DeeperGCN   |  0.1423 +- 0.0064 |
+| SMP   | 0.1263 +- 0.0039 |
 
->📋  Include a table of results from your paper, and link back to the leaderboard for clarity and context. If your main result is a figure, include that figure and link to the command or notebook to reproduce it. 
+### QM9
+| Model         |  Target | MAE |
+| ------------------ | ----- | --------- |
+| DimeNet++   |     U0         |      28.7       |
+| DimeNet++   |     epsilon HOMO         |      61.7       |
 
 
-## Contributing
-
->📋  Pick a licence and describe how to contribute to your code repository. 
+## License
+Hippocratic License
