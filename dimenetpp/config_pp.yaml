@@ -1,0 +1,53 @@
+model_name: "dimenet++"
+
+emb_size: 128
+out_emb_size: 256
+int_emb_size: 64
+basis_emb_size: 8
+num_blocks: 4
+
+num_spherical: 12
+num_radial: 12
+
+cutoff: 2.5
+
+num_before_skip: 1
+num_after_skip: 2
+num_dense_output: 3
+
+num_train: null
+num_valid: null
+data_seed: 42
+dataset: "/nfs/students/yeshwant/datasets/qm9"
+logdir: "/nfs/homedirs/yeshwant/dimenet_sc/logs"
+
+num_steps: 3000000
+ema_decay: 0.999
+
+learning_rate: 0.001
+warmup_steps: 3000
+decay_rate: 0.01
+decay_steps: 4000000
+
+batch_size: 32
+evaluation_interval: 10000
+save_interval: 10000
+restart: None
+comment: "final"
+
+dist:
+  # type: rdkit_bounds
+  type: ppr_rdkit_bounds
+#   type: ppr
+  alpha: 0.15
+
+# 'zeros' for mu, homo, lumo, and zpve; 
+# targets: ['homo']   # ['', 'alpha', 'homo', 'lumo', 'gap', 'zpve'
+# output_init: 'zeros'  
+
+# 'GlorotOrthogonal' for alpha, R2, U0, U, H, G, and Cv
+targets: ['U0'] #, 'r2' 'U0', 'U', 'H', 'G', 'Cv']
+output_init: 'GlorotOrthogonal'  
+
+
+ablation: const_angle
