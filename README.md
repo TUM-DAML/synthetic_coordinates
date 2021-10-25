@@ -3,6 +3,7 @@
 This repository is the official implementation of 
 
 **[Directional Message Passing on Molecular Graphs via Synthetic Coordinates](https://openreview.net/forum?id=ZRu0_3azrCd)** 
+
 by Johannes Klicpera, Chandan Yeshwanth, Stephan Günnemann  
 Published at NeurIPS 2021.
 
