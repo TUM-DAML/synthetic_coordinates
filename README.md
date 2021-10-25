@@ -27,11 +27,14 @@ The QM9 dataset is provided in the `datasets` folder.
 Reference training scripts with the best hyperparameters are included
 ### DeeperGCN and SMP
 The model: `deepergcn` and `smp` can be configured in the script, as well as
-the dataset: `ogbg-molhiv`, `QM9`, `ZINC`.
-```
-cd deepergcn_smp/
-python scripts/train.py
-```
+the dataset: `ogbg-molhiv`, `QM9`, `ZINC`. 
+We provide reference training scripts in the `scripts` folder for -
+
+1. the baseline model: `python scripts/train_baseline.py`
+1. baseline model with distance: bounds matrix (BM) or PPR: `python scripts/train_sc_basic.py`
+1. and linegraph with distance and angle using both BM and PPR: `python scripts/train_sc_linegraph.py`
+
+These can be modified to perform other ablations.
 
 ### DimeNet++
 The model parameters and ablations can be configured in the training script. 

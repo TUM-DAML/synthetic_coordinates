@@ -1,0 +1,131 @@
+# Graph classification and regression
+# Models: DimeNet++, SMP, DeeperGCN
+# Datasets: ZINC, QM9, OGB HIV
+
+seml:
+  name: graph_clsreg
+  executable: seml_scripts/graph_clsreg.py
+  project_root_dir: ..
+  output_dir: /nfs/homedirs/yeshwant/slurm-output
+slurm:
+  experiments_per_job: 2
+  sbatch_options:
+    gres: gpu:1       # num GPUs
+    mem: 64G          # memory
+    cpus-per-task: 8  # num cores
+    time: 6-02:00
+
+###### BEGIN PARAMETER CONFIGURATION ######
+fixed:
+  lr_schedule: True
+  patience: 100
+  min_lr: 1e-5
+  batch_size: 64
+  max_epochs: 3000
+  max_hours: 144
+
+  # smp, deepergcn 
+  model: smp
+  # ZINC, QM9, ogbg-molhiv
+  dataset_name: QM9
+
+grid:
+  seed:
+    type: range
+    min: 0
+    max: 5
+    step: 1
+  learning_rate:
+    type: choice
+    options: [1e-3]
+  l2_reg:
+    type: choice
+    options: [1e-6] 
+  dropout:
+    type: choice
+    options: [0.1] 
+  num_layers:
+    type: choice
+    options: [12] 
+  qm9_target_ndx:
+    type: choice
+    options: [7]
+
+baseline:
+  fixed:
+    add_rdkit_dist: False
+    add_ppr_dist: False
+
+ppr:
+  fixed:
+    add_ppr_dist: True
+    linegraph_angle_mode: null
+
+  dist_only:
+    fixed:
+      conv_encode_edge: True
+      dist_basis: 8
+
+  lg_dist:
+    fixed:
+      linegraph_dist: True
+      linegraph_angle: False
+      emb_basis_global: True
+      emb_basis_local: True
+      emb_bottleneck: 4
+      dist_basis: 8
+    
+  lg_dist_angle:
+    fixed:
+      linegraph_dist: True
+      linegraph_angle: True
+      emb_basis_global: True
+      emb_basis_local: True
+      emb_bottleneck: 4
+      dist_basis: 8
+      angle_basis: 9
+
+rdkit:
+  fixed:
+    add_rdkit_dist: bounds_matrix_both
+    linegraph_angle_mode: center_both
+
+  dist_only:
+    fixed:
+      conv_encode_edge: True
+      dist_basis: 8
+
+  lg_dist:
+    fixed:
+      linegraph_dist: True
+      linegraph_angle: False
+      emb_basis_global: True
+      emb_basis_local: True
+      emb_bottleneck: 4
+      dist_basis: 8
+    
+  lg_dist_angle:
+    fixed:
+      linegraph_dist: True
+      linegraph_angle: True
+      emb_basis_global: True
+      emb_basis_local: True
+      emb_bottleneck: 4
+      dist_basis: 8
+      angle_basis: 9     
+      
+both:
+  fixed:
+    add_rdkit_dist: bounds_matrix_both
+    linegraph_angle_mode: center_both
+    add_ppr_dist: True
+
+  lg_dist_angle:
+    fixed:
+      linegraph_dist: True
+      linegraph_angle: True
+      emb_basis_global: True
+      emb_basis_local: True
+      emb_bottleneck: 4
+      dist_basis: 8
+      angle_basis: 9 

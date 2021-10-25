@@ -1,0 +1,17 @@
+runs/
+# the ogb dataset
+datasets
+*code-workspace
+dataset
+config_big.yml
+*.swp
+jkutils.egg-info/
+build
+dist
+utils
+jkutils
+.ipynb_checkpoints
+__pycache__
+data
+.vscode
+*.egg-info
