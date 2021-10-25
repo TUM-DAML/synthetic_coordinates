@@ -10,7 +10,8 @@ The `deepergcn_smp` folder contains DeeperGCN and SMP implementations in torch, 
 
 ## Requirements
 
-Create a conda environment with Python 3.7 and install the requirements
+We use separate conda environments for DeeperGCN/SMP and dimenetpp. Use this
+command to create the respective environments
 ```
 conda env create -f environment.yml
 ```
