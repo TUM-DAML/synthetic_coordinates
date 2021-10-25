@@ -95,7 +95,7 @@ Please contact klicpera@in.tum.de if you have any questions.
 Please cite our paper if you use our method or code in your own work:
 
 ```
-@inproceedings{klicpera_2021_lcn,
+@inproceedings{klicpera_2021_dmp,
   title={Directional Message Passing on Molecular Graphs via Synthetic Coordinates},
   author={Klicpera, Johannes and Yeshwanth, Chandan and G{\"u}nnemann, Stephan},
   booktitle = {Thirty-fifth Conference on Neural Information Processing Systems (NeurIPS)},
