@@ -3,7 +3,6 @@ Graph classification and regression
 models:
     DeeperGCN
     SMP
-    DimeNet++
 variants:
     basic
     basic + distance as edge feature
@@ -21,7 +20,6 @@ import uuid
 from pathlib import Path
 
 import numpy as np
-from tqdm import tqdm
 
 from sacred import Experiment
 import seml
@@ -30,8 +28,6 @@ import seml
 import torch
 from torch import optim
 from torch_geometric.loader import DataLoader
-from torch_geometric.transforms import Compose
-from torch_geometric.utils import degree
 
 from warmup_scheduler import GradualWarmupScheduler
 
@@ -63,14 +59,9 @@ from icgnn.transforms.qm9 import QM9_Graph_To_Mol, RemoveTargets
 
 from icgnn.data_utils.data import get_graphcls_dataset, get_transformed_dataset
 from icgnn.train_utils.ogb_graphcls import train_eval_model
-from icgnn.train_utils.ogb_utils import (
-    get_ogbgcode_encoder,
-    get_vocab_mapping,
-    decode_arr_to_seq,
-)
 from icgnn.train_utils.evaluators import ZINC_Evaluator, QM9_Evaluator
 
-from ogb.graphproppred import PygGraphPropPredDataset, Evaluator
+from ogb.graphproppred import Evaluator
 
 ex = Experiment()
 seml.setup_logger(ex)
@@ -144,30 +135,6 @@ def config():
     max_hours = None
     metric_graph_cutoff = False
     metric_graph_edgeattr = None
-
-
-def get_deg_hist(train_list):
-    # Compute in-degree histogram over training data.
-    print("Get degree histogram")
-
-    deg = torch.zeros(10, dtype=torch.long)
-    minlen = deg.numel()
-
-    for data in tqdm(train_list):
-        try:
-            try:
-                d = degree(
-                    data.edge_index[1], num_nodes=data.x.shape[0], dtype=torch.long
-                )
-            except:
-                d = degree(
-                    data.edge_index_lg[1], num_nodes=data.x_g.shape[1], dtype=torch.long
-                )
-            deg += torch.bincount(d, minlength=minlen)
-        except:
-            print("Invalid graph, skip during degree count")
-
-    return deg
 
 
 class ComposeCustom(object):
@@ -261,8 +228,7 @@ def run(
         elif dataset_name == "QM9":
             transforms.append(QM9_Graph_To_Mol())
 
-        # create one of each, so that arguments can be provided
-        # TODO: better way to do this without creating one transform of each kind?
+        # create one of each transform
         mapping = {
             "distance_matrix": Set_Distance_Matrix(),
             "3d_coord": Set_3DCoord_Distance(),
@@ -341,6 +307,7 @@ def run(
     transforms.append(Remove_Distances())
 
     if dataset_name == "QM9":
+        # keep only the required target for QM9
         transforms.append(RemoveTargets(keep_ndx=(qm9_target_ndx,)))
     # combine all transforms
     transform = ComposeCustom(transforms)
@@ -356,40 +323,26 @@ def run(
     # Subset objects
     print("Splits:", train_set, val_set, test_set)
 
-    # variables that might be set later
-    # TODO: use a better pattern for this
-    node_encoder, arr2seq = None, None
-
     print("Preparing train list")
     train_list = get_transformed_dataset(train_set)
+    print("Preparing val list")
+    val_list = get_transformed_dataset(val_set)
+    print("Preparing test list")
+    test_list = get_transformed_dataset(test_set)
+    print(f"Train/val/test: {len(train_list)}, {len(val_list)}, {len(test_list)}")
     first_graph = train_list[0]
     print("First train graph:", first_graph)
 
     # dataset-specific preparation
-    if dataset_name == "ogbg-ppa":
-        # multi class, single task
-        num_tasks = train_set.dataset.num_classes
-        multi_class = True
-    elif dataset_name in ("ogbg-molhiv", "ogbg-molpcba"):
+    if dataset_name == "ogbg-molhiv":
         # binary, multiple tasks
         num_tasks = train_set.dataset.num_tasks
         multi_class = False
         node_feat_dim = first_graph.x.shape[-1]
-    elif dataset_name == "ogbg-code":
-        node_encoder = get_ogbgcode_encoder(train_set.dataset.root, hidden_channels)
-        # load the dataset again to get the mapping
-        # going through each sample in the train_set is slower
-        # TODO: avoid this!
-        root = Path(train_set.dataset.root).parent
-        tmp_dataset = PygGraphPropPredDataset(root=root, name="ogbg-code")
-        split_idx = tmp_dataset.get_idx_split()
-        _, idx2vocab = get_vocab_mapping(
-            [tmp_dataset.data.y[i] for i in split_idx["train"]], 5000
+        task_type, eval_metric = (
+            train_set.dataset.task_type,
+            train_set.dataset.eval_metric,
         )
-        arr2seq = lambda arr: decode_arr_to_seq(arr, idx2vocab)
-
-        multi_class = True
-        num_tasks = 5
     elif dataset_name == "ZINC":
         conv_encode_edge = True
         num_tasks = 1
@@ -397,7 +350,6 @@ def run(
         task_type = "regression"
         eval_metric = "mae"
         node_feat_dim = first_graph.x.shape[-1]
-
     elif dataset_name == "QM9":
         conv_encode_edge = True
         num_tasks = first_graph.y.shape[-1]
@@ -406,12 +358,6 @@ def run(
         eval_metric = "mae"
         node_feat_dim = first_graph.x.shape[-1]
 
-    if "ogb" in dataset_name:
-        task_type, eval_metric = (
-            train_set.dataset.task_type,
-            train_set.dataset.eval_metric,
-        )
-
     print(f"Multi class?: {multi_class}, Num tasks: {num_tasks}")
     print(f"Task type: {task_type}")
     print(f"Eval metric: {eval_metric}")
@@ -419,16 +365,8 @@ def run(
     # what is the edge attr called?
     attr = "edge_attr_g" if linegraph_dist else "edge_attr"
     edge_attr_dim = getattr(first_graph, attr).shape[-1]
-
+    # batch collation according to which attribute?
     follow = ["x_g"] if linegraph_dist else []
-
-    deg_hist = get_deg_hist(train_list) if conv == "pna" else None
-
-    print("Preparing val list")
-    val_list = get_transformed_dataset(val_set)
-    print("Preparing test list")
-    test_list = get_transformed_dataset(test_set)
-    print(f"Train/val/test: {len(train_list)}, {len(val_list)}, {len(test_list)}")
 
     loaders = {
         "train": DataLoader(
@@ -455,26 +393,19 @@ def run(
     }
 
     # molecule dataset or something else?
-    mol_data = dataset_name in ("ogbg-molhiv", "ogbg-molpcba")
+    mol_data = dataset_name == "ogbg-molhiv"
     print(f"Using a molecule dataset? {mol_data}")
 
-    code_data = dataset_name in ("ogbg-code")
-    print(f"Using a code dataset?", code_data)
-
     ### pick the training loss
-    if dataset_name in ("ogbg-ppa", "ogbg-code"):
-        criterion = torch.nn.CrossEntropyLoss()
-    elif "classification" in task_type:
+    if "classification" in task_type:
         criterion = torch.nn.BCEWithLogitsLoss()
     else:
         criterion = torch.nn.L1Loss()
     print("Criterion:", criterion)
     ### ### ###
 
-    # angle basis is a constant if angle is not computed, dimension is 1
-    # angle_basis = 1 if not linegraph_angle else angle_basis
-
     # get the real basis dims, might have changed
+    # due to combining 2 bases
     if linegraph_dist:
         lg_node_basis = first_graph.x_lg.shape[-1]
         lg_edge_basis = first_graph.edge_attr_lg.shape[-1]
@@ -531,12 +462,9 @@ def run(
                 node_feat_dim=node_feat_dim,
                 edge_feat_dim=edge_attr_dim,
                 mol_data=mol_data,
-                code_data=code_data,
-                node_encoder=node_encoder,
                 emb_product=emb_product,
                 mlp_act=mlp_act,
                 emb_use_both=emb_use_both,
-                deg_hist=deg_hist,
             )
     elif model == "smp":
         print("Model: Structural Message Passing (SMP)")

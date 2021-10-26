@@ -53,7 +53,7 @@ result = run(
     graph_pooling="mean",
     qm9_target_ndx=7,
     # run on small dataset
-    quick_run=False,
+    quick_run=True,
     # use metric graph when distances are available
     metric_graph_cutoff=None,
     metric_graph_edgeattr=None,
