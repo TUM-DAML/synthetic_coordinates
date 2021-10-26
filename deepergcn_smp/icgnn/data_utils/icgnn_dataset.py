@@ -1,11 +1,11 @@
-'''
+"""
 ICGNN version of the TUDataset
 Includes the original graphs in the TUDataset
 https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/datasets/tu_dataset.html#TUDataset
 
 along with VERSE embeddings, linegraph, distances between nodes
 and angles between edges
-'''
+"""
 
 import os, os.path as osp
 import copy
@@ -23,8 +23,9 @@ import torch_geometric.transforms as T
 from ..models.embeddings import create_embedding
 from ..models.basis import get_dist_basis, get_cos_basis
 
+
 def graph_to_icgnn(graph, emb_dim, num_dist_basis=4, num_cos_basis=4):
-    embedding = torch.Tensor(create_embedding(graph, emb_dim, 'verse'))
+    embedding = torch.Tensor(create_embedding(graph, emb_dim, "verse"))
 
     graph.emb = embedding
 
@@ -35,41 +36,57 @@ def graph_to_icgnn(graph, emb_dim, num_dist_basis=4, num_cos_basis=4):
     # TODO: retain the original edge_attr, dont overwrite it!
     graph.edge_attr = get_dist_basis(emb_dist, num_dist_basis)
 
-    graph_copy = Data(edge_index=copy.deepcopy(graph.edge_index),
-                                           num_nodes=graph.num_nodes)
-    transform = T.Compose([
-        T.LineGraph(force_directed=True),
-        T.Constant()
-    ])
+    graph_copy = Data(
+        edge_index=copy.deepcopy(graph.edge_index), num_nodes=graph.num_nodes
+    )
+    transform = T.Compose([T.LineGraph(force_directed=True), T.Constant()])
     linegraph = transform(graph_copy)
 
-    noloop_mask = ~(graph.edge_index[0, linegraph.edge_index[0]] == graph.edge_index[1, linegraph.edge_index[1]])
+    noloop_mask = ~(
+        graph.edge_index[0, linegraph.edge_index[0]]
+        == graph.edge_index[1, linegraph.edge_index[1]]
+    )
     line_idx_noloop = graph.edge_index.new_empty((2, noloop_mask.sum()))
     line_idx_noloop[0] = torch.masked_select(linegraph.edge_index[0], noloop_mask)
     line_idx_noloop[1] = torch.masked_select(linegraph.edge_index[1], noloop_mask)
     linegraph.edge_index = line_idx_noloop
 
-    emb_diff_ji = torch.index_select(-emb_diff, dim=0, index=linegraph.edge_index[0])  # Ri <- Rj
-    emb_diff_jk = torch.index_select(emb_diff, dim=0, index=linegraph.edge_index[1])   # Rj -> Rk
+    emb_diff_ji = torch.index_select(
+        -emb_diff, dim=0, index=linegraph.edge_index[0]
+    )  # Ri <- Rj
+    emb_diff_jk = torch.index_select(
+        emb_diff, dim=0, index=linegraph.edge_index[1]
+    )  # Rj -> Rk
     emb_dist_ji = torch.norm(emb_diff_ji, p=2, dim=1)
     emb_dist_jk = torch.norm(emb_diff_jk, p=2, dim=1)
-    emb_angle = torch.acos((emb_diff_ji * emb_diff_jk).sum(-1) / (emb_dist_ji * emb_dist_jk))
+    emb_angle = torch.acos(
+        (emb_diff_ji * emb_diff_jk).sum(-1) / (emb_dist_ji * emb_dist_jk)
+    )
 
     linegraph.edge_attr = get_cos_basis(emb_angle, num_cos_basis)
 
     return graph, linegraph
 
+
 class ICGNN_Data(Data):
-    def __init__(self, x_g=None, edge_index_g=None, edge_attr_g=None, x_emb=None,
-                       x_lg=None, edge_index_lg=None, edge_attr_lg=None,
-                       y=None):
-        '''
+    def __init__(
+        self,
+        x_g=None,
+        edge_index_g=None,
+        edge_attr_g=None,
+        x_emb=None,
+        x_lg=None,
+        edge_index_lg=None,
+        edge_attr_lg=None,
+        y=None,
+    ):
+        """
         *_g: properties of the graph
         *_lg: properties of the linegraph
 
         See tutorial here:
         https://pytorch-geometric.readthedocs.io/en/latest/notes/batching.html#pairs-of-graphs
-        '''
+        """
         super().__init__()
 
         self.edge_index_g = edge_index_g
@@ -84,12 +101,13 @@ class ICGNN_Data(Data):
         self.y = y
 
     def __inc__(self, key, value, *args, **kwargs):
-        if key == 'edge_index_g':
+        if key == "edge_index_g":
             return self.x_g.size(0)
-        if key == 'edge_index_lg':
+        if key == "edge_index_lg":
             return self.x_lg.size(0)
         else:
             return super().__inc__(key, value)
+
 
 def data_to_storage(data):
     keys = data.keys
@@ -111,32 +129,37 @@ def data_to_icgnndata(graph, emb_dim, write_file=False, base_path=None):
     try:
         graph, linegraph = graph_to_icgnn(graph, emb_dim=emb_dim)
     except:
-        print(f'Could not create VERSE for graph {ndx}')
+        print(f"Could not create VERSE for graph {ndx}")
         return
 
-    icgnn_data = ICGNN_Data(x_g=graph.x, edge_index_g=graph.edge_index,
-                    x_emb=graph.emb,
-                    edge_attr_g=graph.edge_attr,
-                    x_lg=linegraph.x, edge_index_lg=linegraph.edge_index,
-                    edge_attr_lg=linegraph.edge_attr,
-                    y=graph.y)
+    icgnn_data = ICGNN_Data(
+        x_g=graph.x,
+        edge_index_g=graph.edge_index,
+        x_emb=graph.emb,
+        edge_attr_g=graph.edge_attr,
+        x_lg=linegraph.x,
+        edge_index_lg=linegraph.edge_index,
+        edge_attr_lg=linegraph.edge_attr,
+        y=graph.y,
+    )
 
     if write_file:
-        out_path = osp.join(base_path, f'data_{ndx}.pt')
+        out_path = osp.join(base_path, f"data_{ndx}.pt")
         torch.save(data_to_storage(icgnn_data), out_path)
     else:
         return icgnn_data
 
 
 class ICGNNDataset(InMemoryDataset):
-    def __init__(self, base_dataset=None, emb_dim=64, use_multiproc=False,
-                transform=None):
-        '''
+    def __init__(
+        self, base_dataset=None, emb_dim=64, use_multiproc=False, transform=None
+    ):
+        """
         base_dataset: the TUDataset object from which this new dataset is created
         emb_dim: embedding dimension for VERSE
         use_multiproc: use multi processing to create the dataset
         transform: the transform to apply on each sample
-        '''
+        """
         self.use_multiproc = use_multiproc
         self.emb_dim = emb_dim
         self.base_dataset = base_dataset
@@ -150,10 +173,10 @@ class ICGNNDataset(InMemoryDataset):
 
     @property
     def processed_dir(self):
-        '''
+        """
         Save the processed dataset to the same directory
-        '''
-        return osp.join(self.root, 'processed')
+        """
+        return osp.join(self.root, "processed")
 
     @property
     def raw_file_names(self):
@@ -162,23 +185,24 @@ class ICGNNDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        '''
+        """
         Output a single file
-        '''
-        return ['icgnn_data.pt']
+        """
+        return ["icgnn_data.pt"]
 
     def get(self, idx):
         from itertools import repeat
-        '''
+
+        """
         copied from original source code
         and edited to "detach" the tensors in the graph
         so that we can use multiproccessing
-        '''
+        """
         # create an empty object
         data = self.data.__class__()
 
         # copy the num nodes attribute
-        if hasattr(self.data, '__num_nodes__'):
+        if hasattr(self.data, "__num_nodes__"):
             data.num_nodes = self.data.__num_nodes__[idx]
 
         # copy everything
@@ -201,7 +225,7 @@ class ICGNNDataset(InMemoryDataset):
     def process(self):
         # create a new ICGNN_Data list from the TU Dataset
         data_list = []
-        print(f'Processing {len(self.base_dataset)} graphs')
+        print(f"Processing {len(self.base_dataset)} graphs")
 
         # multiprocessing
         if self.use_multiproc:
@@ -210,15 +234,19 @@ class ICGNNDataset(InMemoryDataset):
 
             chunksize = 8
             n_proc = 8
-            print(f'Using {n_proc} processes, chunksize: {chunksize}')
+            print(f"Using {n_proc} processes, chunksize: {chunksize}")
             with Pool(processes=n_proc) as pool:
-                for result in tqdm(pool.imap(func=partial_func, iterable=self.base_dataset,
-                                            chunksize=chunksize),
-                                    total=len(self.base_dataset)
-                                ):
+                for result in tqdm(
+                    pool.imap(
+                        func=partial_func,
+                        iterable=self.base_dataset,
+                        chunksize=chunksize,
+                    ),
+                    total=len(self.base_dataset),
+                ):
                     data_list.append(data_to_storage(result))
         else:
-            print(f'Using a single process')
+            print(f"Using a single process")
             # one at a time
             for (ndx, graph) in enumerate(tqdm(self.base_dataset)):
                 result = data_to_icgnndata((ndx, graph), emb_dim=self.emb_dim)
@@ -229,12 +257,19 @@ class ICGNNDataset(InMemoryDataset):
         # save to file
         torch.save((data, slices), self.processed_paths[0])
 
+
 class LargeICGNNDataset(Dataset):
-    def __init__(self, base_dataset=None, emb_dim=32, use_multiproc=True,
-                transform=None, ignore_ndx=[]):
-        '''
+    def __init__(
+        self,
+        base_dataset=None,
+        emb_dim=32,
+        use_multiproc=True,
+        transform=None,
+        ignore_ndx=[],
+    ):
+        """
         base_dataset: the TUDataset object from which this new dataset is created
-        '''
+        """
         self.use_multiproc = use_multiproc
         self.emb_dim = emb_dim
         self.base_dataset = base_dataset
@@ -259,10 +294,10 @@ class LargeICGNNDataset(Dataset):
 
     @property
     def processed_dir(self):
-        '''
+        """
         Save the processed dataset to the same directory
-        '''
-        return osp.join(self.root, 'processed', 'icgnn_graphs')
+        """
+        return osp.join(self.root, "processed", "icgnn_graphs")
 
     @property
     def raw_file_names(self):
@@ -271,11 +306,14 @@ class LargeICGNNDataset(Dataset):
 
     @property
     def processed_file_names(self):
-        '''
+        """
         Output multiple files - 1 for each graph
-        '''
-        filenames = [f'data_{i}.pt' for i in range(len(self.base_dataset)) \
-                        if i not in self.ignore_ndx]
+        """
+        filenames = [
+            f"data_{i}.pt"
+            for i in range(len(self.base_dataset))
+            if i not in self.ignore_ndx
+        ]
         return filenames
 
     def len(self):
@@ -284,35 +322,44 @@ class LargeICGNNDataset(Dataset):
     def get(self, idx):
         if idx in self.ignore_ndx:
             idx = 0
-        data = torch.load(osp.join(self.processed_dir, f'data_{idx}.pt'))
+        data = torch.load(osp.join(self.processed_dir, f"data_{idx}.pt"))
         return data
 
     def process(self):
         # create a new ICGNN_Data list from the TU Dataset
-        print('Creating a large dataset!')
+        print("Creating a large dataset!")
 
-        print(f'Processing {len(self.base_dataset)} graphs')
+        print(f"Processing {len(self.base_dataset)} graphs")
 
         # multiprocessing
         if self.use_multiproc:
             # fix the emb_dim for all function calls
-            partial_func = partial(data_to_icgnndata, emb_dim=self.emb_dim,
-                                    write_file=True,
-                                    base_path=self.processed_dir)
+            partial_func = partial(
+                data_to_icgnndata,
+                emb_dim=self.emb_dim,
+                write_file=True,
+                base_path=self.processed_dir,
+            )
 
             chunksize = 8
             n_proc = 8
-            print(f'Using {n_proc} processes, chunksize: {chunksize}')
+            print(f"Using {n_proc} processes, chunksize: {chunksize}")
             with Pool(processes=n_proc) as pool:
-                for _ in tqdm(pool.imap(func=partial_func,
-                                                            iterable=enumerate(self.base_dataset),
-                                                            chunksize=chunksize),
-                                                total=len(self.base_dataset)):
+                for _ in tqdm(
+                    pool.imap(
+                        func=partial_func,
+                        iterable=enumerate(self.base_dataset),
+                        chunksize=chunksize,
+                    ),
+                    total=len(self.base_dataset),
+                ):
                     pass
         else:
-            print(f'Using a single process')
+            print(f"Using a single process")
             # one at a time
             for i, graph in enumerate(tqdm(self.base_dataset)):
                 result = data_to_icgnndata(graph, emb_dim=self.emb_dim)
-                torch.save(data_to_storage(result),
-                                    osp.join(self.processed_dir, f'data_{i}.pt'))
+                torch.save(
+                    data_to_storage(result),
+                    osp.join(self.processed_dir, f"data_{i}.pt"),
+                )

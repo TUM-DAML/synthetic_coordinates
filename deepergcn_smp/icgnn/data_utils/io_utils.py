@@ -6,8 +6,8 @@ from collections import OrderedDict
 
 
 def is_gzipped(path: str) -> bool:
-    with open(path, 'rb') as f:
-        return binascii.hexlify(f.read(2)) == b'1f8b'
+    with open(path, "rb") as f:
+        return binascii.hexlify(f.read(2)) == b"1f8b"
 
 
 def read_binary(path: str) -> bytes:
@@ -15,12 +15,12 @@ def read_binary(path: str) -> bytes:
         with gzip.open(path) as f:
             return f.read()
     else:
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             return f.read()
 
 
 def read_text(path: str) -> str:
-    return read_binary(path).decode('utf-8')
+    return read_binary(path).decode("utf-8")
 
 
 def read_jsonl(path: str) -> Iterable[Any]:

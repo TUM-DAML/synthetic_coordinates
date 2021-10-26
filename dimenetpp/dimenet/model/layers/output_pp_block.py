@@ -5,22 +5,39 @@ from ..initializers import GlorotOrthogonal
 
 
 class OutputPPBlock(layers.Layer):
-    def __init__(self, emb_size, out_emb_size, num_dense, num_targets=12,
-                 activation=None, output_init='zeros', name='output', **kwargs):
+    def __init__(
+        self,
+        emb_size,
+        out_emb_size,
+        num_dense,
+        num_targets=12,
+        activation=None,
+        output_init="zeros",
+        name="output",
+        **kwargs
+    ):
         super().__init__(name=name, **kwargs)
         weight_init = GlorotOrthogonal()
-        if output_init == 'GlorotOrthogonal':
+        if output_init == "GlorotOrthogonal":
             output_init = GlorotOrthogonal()
 
-        self.up_projection = layers.Dense(out_emb_size, use_bias=False, kernel_initializer=weight_init)
+        self.up_projection = layers.Dense(
+            out_emb_size, use_bias=False, kernel_initializer=weight_init
+        )
 
         self.dense_layers = []
         for i in range(num_dense):
             self.dense_layers.append(
-                layers.Dense(out_emb_size, activation=activation, use_bias=True,
-                             kernel_initializer=weight_init))
-        self.dense_final = layers.Dense(num_targets, use_bias=False,
-                                        kernel_initializer=output_init)
+                layers.Dense(
+                    out_emb_size,
+                    activation=activation,
+                    use_bias=True,
+                    kernel_initializer=weight_init,
+                )
+            )
+        self.dense_final = layers.Dense(
+            num_targets, use_bias=False, kernel_initializer=output_init
+        )
 
     def call(self, inputs):
         x, idnb_i, n_atoms = inputs

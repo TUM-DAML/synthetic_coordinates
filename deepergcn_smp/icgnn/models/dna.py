@@ -9,22 +9,19 @@ import torch_scatter
 
 import numpy as np
 
+
 class DNAConvNet(torch.nn.Module):
-    def __init__(self,
-                 in_channels,
-                 hidden_channels,
-                 out_channels,
-                 num_layers,
-                 heads=1,
-                 groups=1):
+    def __init__(
+        self, in_channels, hidden_channels, out_channels, num_layers, heads=1, groups=1
+    ):
         super(DNAConvNet, self).__init__()
         self.hidden_channels = hidden_channels
         self.lin1 = torch.nn.Linear(in_channels, hidden_channels)
         self.convs = torch.nn.ModuleList()
         for i in range(num_layers):
             self.convs.append(
-                DNAConv(
-                    hidden_channels, heads, groups, dropout=0.8, cached=True))
+                DNAConv(hidden_channels, heads, groups, dropout=0.8, cached=True)
+            )
         self.lin2 = torch.nn.Linear(hidden_channels, out_channels)
 
     def reset_parameters(self):

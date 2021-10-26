@@ -1,4 +1,3 @@
-
 from copy import deepcopy
 from functools import partial
 
@@ -14,27 +13,38 @@ from rdkit.Chem.rdmolops import FastFindRings
 from ogb.utils.features import get_atom_feature_dims
 
 from icgnn.transforms.rdkit_utils import (
-    get_chiral_tag, get_formal_charge, get_hybridization, get_aromatic,
-    bond_ndx_to_bond, get_bond_stereo, get_conjugated
+    get_chiral_tag,
+    get_formal_charge,
+    get_hybridization,
+    get_aromatic,
+    bond_ndx_to_bond,
+    get_bond_stereo,
+    get_conjugated,
 )
 
-def extract_node_feature(data, reduce='add'):
-    if reduce in ['mean', 'max', 'add']:
-        data.x = scatter(data.edge_attr,
-                         data.edge_index[0],
-                         dim=0,
-                         dim_size=data.num_nodes,
-                         reduce=reduce)
+
+def extract_node_feature(data, reduce="add"):
+    if reduce in ["mean", "max", "add"]:
+        data.x = scatter(
+            data.edge_attr,
+            data.edge_index[0],
+            dim=0,
+            dim_size=data.num_nodes,
+            reduce=reduce,
+        )
     else:
-        raise Exception('Unknown Aggregation Type')
+        raise Exception("Unknown Aggregation Type")
     return data
 
-class Graph_To_Mol():
-    '''
+
+class Graph_To_Mol:
+    """
     Convert OGB graph (hiv or pcba) to an RDKit molecule
-    '''
+    """
+
     def __init__(self):
         pass
+
     def __call__(self, graph):
         # create a read/write molecule
         mol = Chem.RWMol()
@@ -69,10 +79,12 @@ class Graph_To_Mol():
 
         return (graph, mol)
 
-class OneHot_Mol():
-    '''
+
+class OneHot_Mol:
+    """
     One hot encoding for molhiv and molpcba graphs
-    '''
+    """
+
     def __init__(self):
         # inbuilt function to get the max number of classes for each feature
         self.num_classes = get_atom_feature_dims()
@@ -94,20 +106,22 @@ class OneHot_Mol():
         self.one_hot_edge_features = [0, 1]
 
         # feature which dont need one hot encoding
-        self.regular_features = [n for n in range(len(self.num_classes)) \
-                                if n not in self.one_hot_features]
+        self.regular_features = [
+            n for n in range(len(self.num_classes)) if n not in self.one_hot_features
+        ]
 
         # total input feature dimension
-        total_dim = sum([self.num_classes[i] for i in self.one_hot_features]) \
-                    + len(self.regular_features)
-        print(f'graph.x one hot encoding with {total_dim} classes')
+        total_dim = sum([self.num_classes[i] for i in self.one_hot_features]) + len(
+            self.regular_features
+        )
+        print(f"graph.x one hot encoding with {total_dim} classes")
 
     def __call__(self, data):
-        '''
+        """
         data: data_utils.icgnn_dataset.ICGNN_Data
 
         convert the indices in data.x_g into a one hot encoding
-        '''
+        """
         # accumulate the one hot encoding of each feature here
         # then concat
         new_data = deepcopy(data)
@@ -115,62 +129,65 @@ class OneHot_Mol():
         # keep non-onehot features as-is
         new_x = [new_data.x_g[:, self.regular_features]]
 
-        new_x += [ F.one_hot(new_data.x_g[:, feature_ndx],
-                            num_classes=self.num_classes[feature_ndx])
-                    for feature_ndx in self.one_hot_features
-                ]
+        new_x += [
+            F.one_hot(
+                new_data.x_g[:, feature_ndx], num_classes=self.num_classes[feature_ndx]
+            )
+            for feature_ndx in self.one_hot_features
+        ]
 
         new_data.x_g = torch.cat(new_x, dim=-1)
 
         return new_data
 
+
 class Laplacian_PositionEnc(object):
-    '''
+    """
     Positional encoding based on graph Laplacian
     see paper: Benchmarking Graph Neural Networks
     https://arxiv.org/pdf/2003.00982.pdf
-    '''
+    """
 
     def __init__(self, x_dim=135, k=16):
-        '''
+        """
         x_dim: dimension of the graph node feature
         k: pick bottom k eigenvectors
-        '''
+        """
         self.k = k
         self.linear = nn.Linear(k, x_dim)
 
     def __call__(self, data):
-        '''
+        """
         data: data_utils.icgnn_dataset.ICGNN_Data
         add positional encoding to the graph
-        '''
+        """
         print(data)
         # get full adj matrix
         num_nodes = data.x_g.shape[0]
         adj_size = torch.Size([num_nodes, num_nodes])
 
-        lap_edges, lap_val = get_laplacian(data.edge_index_g, normalization='sym')
+        lap_edges, lap_val = get_laplacian(data.edge_index_g, normalization="sym")
 
         L = torch.sparse_coo_tensor(lap_edges, lap_val, adj_size).to_dense()
         result = torch.eig(L, eigenvectors=True)
         eigval, eigvec = result.eigenvalues[:, 0], result.eigenvectors
 
         # select the first k dimensions of each eigenvector
-        eigvec = eigvec[:self.k, :]
+        eigvec = eigvec[: self.k, :]
 
         # sort eigenvalues
         sorted_vals, sorted_ndx = torch.sort(eigval)
 
         # pick the lowest k eigvals and corresponding vectors
-        bottom_k_ndx = sorted_ndx[:self.k]
+        bottom_k_ndx = sorted_ndx[: self.k]
         bottom_k_eigvec = eigvec[:, bottom_k_ndx]
-        bottom_k_eigval = sorted_vals[:self.k]
+        bottom_k_eigval = sorted_vals[: self.k]
         # normalize by the eigenvalue
         norm_k_eigvec = bottom_k_eigvec / bottom_k_eigval
 
         # randomly flip sign - get random -1, +1 vector
         rands = torch.rand_like(bottom_k_eigval)
-        rand_sign = ((rands > 0.5)*1 - 0.5)*2
+        rand_sign = ((rands > 0.5) * 1 - 0.5) * 2
         # multiply with eigvals
         rand_sign_eigvals = bottom_k_eigval * rand_sign
 

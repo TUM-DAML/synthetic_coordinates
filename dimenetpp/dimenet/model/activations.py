@@ -6,7 +6,7 @@ def swish(x):
     Swish activation function,
     from Ramachandran, Zopf, Le 2017. "Searching for Activation Functions"
     """
-    return x*tf.sigmoid(x)
+    return x * tf.sigmoid(x)
 
 
 def shifted_softplus(x):

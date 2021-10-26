@@ -11,7 +11,9 @@ class Metrics:
         self.loss_metric = tf.keras.metrics.Mean()
         self.mean_mae_metric = tf.keras.metrics.Mean()
         self.maes_metric = tf.keras.metrics.MeanTensor()
-        self.maes_metric.update_state([0] * len(targets), sample_weight=[0] * len(targets))
+        self.maes_metric.update_state(
+            [0] * len(targets), sample_weight=[0] * len(targets)
+        )
 
     def update_state(self, loss, mean_mae, mae, nsamples):
         self.loss_metric.update_state(loss, sample_weight=nsamples)
@@ -28,9 +30,11 @@ class Metrics:
                 self.ex.current_run.info[key].append(val)
 
         if self.ex.current_run is not None:
-            if f'step_{self.tag}' not in self.ex.current_run.info:
-                self.ex.current_run.info[f'step_{self.tag}'] = []
-            self.ex.current_run.info[f'step_{self.tag}'].append(tf.summary.experimental.get_step())
+            if f"step_{self.tag}" not in self.ex.current_run.info:
+                self.ex.current_run.info[f"step_{self.tag}"] = []
+            self.ex.current_run.info[f"step_{self.tag}"].append(
+                tf.summary.experimental.get_step()
+            )
 
     def reset_states(self):
         self.loss_metric.reset_states()
@@ -39,11 +43,11 @@ class Metrics:
 
     def result(self):
         result_dict = {}
-        result_dict[f'loss_{self.tag}'] = self.loss
-        result_dict[f'mean_mae_{self.tag}'] = self.mean_mae
-        result_dict[f'mean_log_mae_{self.tag}'] = self.mean_log_mae
+        result_dict[f"loss_{self.tag}"] = self.loss
+        result_dict[f"mean_mae_{self.tag}"] = self.mean_mae
+        result_dict[f"mean_log_mae_{self.tag}"] = self.mean_log_mae
         for i, key in enumerate(self.targets):
-            result_dict[key + '_' + self.tag] = self.maes[i]
+            result_dict[key + "_" + self.tag] = self.maes[i]
         return result_dict
 
     @property

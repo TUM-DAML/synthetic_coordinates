@@ -5,38 +5,45 @@ from .torch_message import GenMessagePassing, MsgNorm
 
 from torch.nn import Linear, Sequential, Identity
 
+
 class GENConv_Linegraph(GenMessagePassing):
     """
-     GENeralized Graph Convolution (GENConv): https://arxiv.org/pdf/2006.07739.pdf
-     SoftMax  &  PowerMean Aggregation
+    GENeralized Graph Convolution (GENConv): https://arxiv.org/pdf/2006.07739.pdf
+    SoftMax  &  PowerMean Aggregation
     """
-    def __init__(self, in_dim, emb_dim,
-                aggr='softmax',
-                 t=1.0, learn_t=False,
-                 p=1.0, learn_p=False,
-                 msg_norm=False, learn_msg_scale=True,
-                 edge_attr_dim=None,
-                 norm='batch', mlp_layers=2, mlp_act='relu', 
-                 lg_node_basis=None, lg_edge_basis=None,
-                 emb_basis_global=True,
-                 emb_basis_local=False, 
-                 emb_bottleneck=False):
 
-        super().__init__(aggr=aggr,
-                            t=t, learn_t=learn_t,
-                            p=p, learn_p=learn_p)
+    def __init__(
+        self,
+        in_dim,
+        emb_dim,
+        aggr="softmax",
+        t=1.0,
+        learn_t=False,
+        p=1.0,
+        learn_p=False,
+        msg_norm=False,
+        learn_msg_scale=True,
+        edge_attr_dim=None,
+        norm="batch",
+        mlp_layers=2,
+        mlp_act="relu",
+        lg_node_basis=None,
+        lg_edge_basis=None,
+        emb_basis_global=True,
+        emb_basis_local=False,
+        emb_bottleneck=False,
+    ):
+
+        super().__init__(aggr=aggr, t=t, learn_t=learn_t, p=p, learn_p=learn_p)
 
         channels_list = [in_dim]
 
-        for _ in range(mlp_layers-1):
-            channels_list.append(in_dim*2)
+        for _ in range(mlp_layers - 1):
+            channels_list.append(in_dim * 2)
 
         channels_list.append(emb_dim)
 
-        self.mlp = MLP(channels=channels_list,
-                       norm=norm,
-                       last_lin=False,
-                       act=mlp_act)
+        self.mlp = MLP(channels=channels_list, norm=norm, last_lin=False, act=mlp_act)
 
         self.msg_encoder = torch.nn.ReLU()
         self.eps = 1e-7
@@ -52,12 +59,12 @@ class GENConv_Linegraph(GenMessagePassing):
                 if emb_bottleneck:
                     # basis->bottleneck->hidden
                     self.emb_node_basis = Sequential(
-                        Linear(lg_node_basis, emb_bottleneck), 
-                        Linear(emb_bottleneck, emb_dim)
+                        Linear(lg_node_basis, emb_bottleneck),
+                        Linear(emb_bottleneck, emb_dim),
                     )
                     self.emb_edge_basis = Sequential(
-                        Linear(lg_edge_basis, emb_bottleneck), 
-                        Linear(emb_bottleneck, emb_dim)
+                        Linear(lg_edge_basis, emb_bottleneck),
+                        Linear(emb_bottleneck, emb_dim),
                     )
                 else:
                     # basis->hidden
@@ -67,7 +74,7 @@ class GENConv_Linegraph(GenMessagePassing):
             # basis already embedded to emb_dim
             self.emb_node_basis = Identity()
             self.emb_edge_basis = Identity()
-        
+
         # embed the message a few times
         self.msg_emb1 = Linear(emb_dim, emb_dim)
         self.msg_emb2 = Linear(emb_dim, emb_dim, bias=False)
@@ -79,7 +86,9 @@ class GENConv_Linegraph(GenMessagePassing):
             self.msg_norm = Identity()
 
     def forward(self, x, edge_index, node_basis, edge_basis):
-        m = self.propagate(edge_index, x=x, node_basis=node_basis, edge_basis=edge_basis)
+        m = self.propagate(
+            edge_index, x=x, node_basis=node_basis, edge_basis=edge_basis
+        )
         m = self.msg_norm(m)
         # skip connection
         h = x + m
@@ -89,9 +98,9 @@ class GENConv_Linegraph(GenMessagePassing):
         return out
 
     def message(self, x_j, node_basis_i, edge_basis):
-        '''
+        """
         Message passing: Dimenet interaction layer
-        '''
+        """
         msg1 = x_j * self.emb_node_basis(node_basis_i)
         msg2 = self.msg_emb2(msg1)
         msg3 = msg2 * self.emb_edge_basis(edge_basis)
@@ -105,43 +114,50 @@ class GENConv_Linegraph(GenMessagePassing):
 
 class GENConv(GenMessagePassing):
     """
-     GENeralized Graph Convolution (GENConv): https://arxiv.org/pdf/2006.07739.pdf
-     SoftMax  &  PowerMean Aggregation
+    GENeralized Graph Convolution (GENConv): https://arxiv.org/pdf/2006.07739.pdf
+    SoftMax  &  PowerMean Aggregation
     """
-    def __init__(self, in_dim, emb_dim,
-                 aggr='softmax',
-                 t=1.0, learn_t=False,
-                 p=1.0, learn_p=False,
-                 msg_norm=False, learn_msg_scale=True,
-                 encode_edge=False, bond_encoder=False,
-                 edge_feat_dim=None,
-                 norm='batch', mlp_layers=2,
-                 eps=1e-7, emb_product=True,
-                 mlp_act='relu', 
-                 emb_attrs=True,
-                 emb_use_both=False,
-                 emb_bottleneck=False):
 
-        super(GENConv, self).__init__(aggr=aggr,
-                                      t=t, learn_t=learn_t,
-                                      p=p, learn_p=learn_p)
+    def __init__(
+        self,
+        in_dim,
+        emb_dim,
+        aggr="softmax",
+        t=1.0,
+        learn_t=False,
+        p=1.0,
+        learn_p=False,
+        msg_norm=False,
+        learn_msg_scale=True,
+        encode_edge=False,
+        bond_encoder=False,
+        edge_feat_dim=None,
+        norm="batch",
+        mlp_layers=2,
+        eps=1e-7,
+        emb_product=True,
+        mlp_act="relu",
+        emb_attrs=True,
+        emb_use_both=False,
+        emb_bottleneck=False,
+    ):
+
+        super(GENConv, self).__init__(
+            aggr=aggr, t=t, learn_t=learn_t, p=p, learn_p=learn_p
+        )
 
         channels_list = [in_dim]
 
-
-        for _ in range(mlp_layers-1):
-            channels_list.append(in_dim*2)
+        for _ in range(mlp_layers - 1):
+            channels_list.append(in_dim * 2)
 
         channels_list.append(emb_dim)
 
-        self.mlp = MLP(channels=channels_list,
-                       norm=norm,
-                       last_lin=False,
-                       act=mlp_act)
+        self.mlp = MLP(channels=channels_list, norm=norm, last_lin=False, act=mlp_act)
 
         self.msg_encoder = torch.nn.ReLU()
         self.eps = eps
-        
+
         self.emb_attrs = emb_attrs
         self.emb_product = emb_product
         self.emb_use_both = emb_use_both
@@ -158,11 +174,11 @@ class GENConv(GenMessagePassing):
                     # d -> bottleneck -> d
                     self.linear_target_x = Sequential(
                         Linear(emb_dim, emb_bottleneck, bias=False),
-                        Linear(emb_bottleneck, emb_dim, bias=False)
+                        Linear(emb_bottleneck, emb_dim, bias=False),
                     )
                     self.linear_edgeattr = Sequential(
                         Linear(emb_dim, emb_bottleneck, bias=False),
-                        Linear(emb_bottleneck, emb_dim, bias=False)
+                        Linear(emb_bottleneck, emb_dim, bias=False),
                     )
                 else:
                     # use 1 linear layer to project, d -> d
@@ -170,7 +186,7 @@ class GENConv(GenMessagePassing):
                     self.linear_edgeattr = Linear(emb_dim, emb_dim, bias=False)
             else:
                 self.linear_target_x = Identity()
-                self.linear_edgeattr = Identity()                    
+                self.linear_edgeattr = Identity()
 
         self.msg_norm = msg_norm
         self.encode_edge = encode_edge
@@ -188,13 +204,13 @@ class GENConv(GenMessagePassing):
                 self.edge_encoder = torch.nn.Linear(edge_feat_dim, emb_dim)
 
     def forward(self, x, edge_index, edge_attr=None, x_orig=None):
-        '''
+        """
         x: input node embedding at this layer
         edge_index: usual
         edge_attr: usual
-        x_orig: an older value of x, can be the input to the whole GCN or 
+        x_orig: an older value of x, can be the input to the whole GCN or
                 edge_dist_basis in case of linegraph
-        '''
+        """
         if self.encode_edge and edge_attr is not None:
             edge_emb = self.edge_encoder(edge_attr)
         else:

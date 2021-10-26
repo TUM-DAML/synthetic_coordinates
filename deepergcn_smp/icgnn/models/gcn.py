@@ -3,6 +3,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from torch_geometric.nn import global_mean_pool as gap
 
+
 class GCNNetGraphCls(torch.nn.Module):
     def __init__(self, num_features, hidden_dim, num_classes):
         super(GCNNetGraphCls, self).__init__()
@@ -32,6 +33,7 @@ class GCNNetGraphCls(torch.nn.Module):
 
         return x
 
+
 class GCNNet(torch.nn.Module):
     def __init__(self, num_features, hidden_dim, num_classes):
         super(GCNNet, self).__init__()
@@ -44,7 +46,7 @@ class GCNNet(torch.nn.Module):
     def reset_parameters(self):
         self.conv1.reset_parameters()
         self.conv2.reset_parameters()
-        
+
     def forward(self, x, edge_index):
         out = F.relu(self.conv1(x, edge_index))
         out = F.dropout(out, training=self.training)
