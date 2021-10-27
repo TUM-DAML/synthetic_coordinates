@@ -169,52 +169,6 @@ def step(
 
     return np.mean(loss_list), evaluator.eval(input_dict)
 
-
-def train(model, device, loader, optimizer, criterion, multi_class, pred_list):
-    loss_list = []
-    model.train()
-
-    for _, batch in enumerate(loader):
-        batch = batch.to(device)
-
-        if batch.x.shape[0] == 1:
-            print("Skipping batch")
-            pass
-        else:
-            optimizer.zero_grad()
-            # indices to consider in this batch
-            is_labeled = batch.y == batch.y
-
-            if pred_list:
-                pass
-            # multi class, single prediction per graph
-            elif multi_class:
-                # 1-dim index
-                is_labeled = is_labeled.view(-1)
-                # 1-dim target
-                y = batch.y[is_labeled].view(-1)
-            else:
-                # can have multiple tasks here
-                y = batch.y[is_labeled].to(torch.float32)
-
-            # select only these predictions
-            pred = model(batch)
-
-            # prediction is multi class, multi task?
-            if pred_list:
-                loss = 0
-                for i in range(len(pred)):
-                    loss += criterion(pred[i].to(torch.float32), batch.y_arr[:, i])
-                loss = loss / len(pred)
-            else:
-                loss = criterion(pred.to(torch.float32)[is_labeled], y)
-            loss.backward()
-            optimizer.step()
-
-            loss_list.append(loss.item())
-    return np.mean(loss_list)
-
-
 @torch.no_grad()
 def evaluate(model, device, loader, evaluator, multi_class):
     model.eval()
