@@ -34,8 +34,6 @@ class DeeperGCN(torch.nn.Module):
         graph_pooling="mean",
         edge_feat_dim=None,
         mol_data=True,
-        code_data=False,
-        node_encoder=None,
         node_feat_dim=7,
         emb_product=True,
         mlp_act="relu",
@@ -54,9 +52,6 @@ class DeeperGCN(torch.nn.Module):
         self.add_virtual_node = add_virtual_node
         # molhiv and molpcba
         self.mol_data = mol_data
-        # for ogbg-code
-        self.code_data = code_data
-        self.node_encoder = node_encoder
         self.num_tasks = num_tasks
         self.emb_use_global = emb_use_global
 
@@ -155,15 +150,7 @@ class DeeperGCN(torch.nn.Module):
         else:
             raise Exception("Unknown Pool Type")
 
-        if self.code_data:
-            # predict 5 tokens of the function name for each graph
-            self.graph_pred_linear_list = torch.nn.ModuleList()
-            for i in range(self.num_tasks):
-                self.graph_pred_linear_list.append(
-                    torch.nn.Linear(hidden_channels, 5000 + 2)
-                )
-        else:
-            self.graph_pred_linear = torch.nn.Linear(hidden_channels, self.num_tasks)
+        self.graph_pred_linear = torch.nn.Linear(hidden_channels, self.num_tasks)
 
     def forward(self, input_batch, h=None, make_pred=True):
         """
@@ -182,14 +169,6 @@ class DeeperGCN(torch.nn.Module):
         if h is None:
             if self.mol_data:
                 h = self.atom_encoder(x)
-            elif self.code_data:
-                node_depth = input_batch.node_depth
-                h = self.node_encoder(
-                    x,
-                    node_depth.view(
-                        -1,
-                    ),
-                )
             else:
                 h = self.node_features_encoder(x.float())
         else:
@@ -282,15 +261,7 @@ class DeeperGCN(torch.nn.Module):
         if make_pred:
             h_graph = self.pool(h, batch)
 
-            if self.code_data:
-                pred_list = []
-
-                for linear in self.graph_pred_linear_list:
-                    pred_list.append(linear(h_graph))
-
-                return pred_list
-            else:
-                return self.graph_pred_linear(h_graph)
+            return self.graph_pred_linear(h_graph)
         else:
             return h
 
