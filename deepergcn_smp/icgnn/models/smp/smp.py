@@ -1,11 +1,9 @@
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
 from icgnn.models.smp.smp_layers import SMPLayer
 from icgnn.models.smp.layers import GraphExtractor, EdgeCounter, BatchNorm
 from icgnn.models.smp.misc import create_batch_info, map_x_to_u
 
-import torch_scatter
 from torch_geometric.data import Batch
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool
 
