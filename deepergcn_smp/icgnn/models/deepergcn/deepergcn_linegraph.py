@@ -3,7 +3,6 @@ import torch_scatter
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool
-from torch_geometric.data import Batch
 
 from .torch_vertex import GENConv_Linegraph
 from .torch_nn import norm_layer

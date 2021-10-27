@@ -5,7 +5,6 @@ __license__ = "MIT"
 import os, os.path as osp
 
 import numpy as np
-from functools import partial
 from torch_geometric.transforms.compose import Compose
 from tqdm import tqdm
 

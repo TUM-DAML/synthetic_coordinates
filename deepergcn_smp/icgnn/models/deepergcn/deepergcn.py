@@ -4,7 +4,6 @@ import torch
 from torch.nn import Linear
 import torch.nn.functional as F
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool
-from torch_geometric.nn import PNAConv
 
 from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
 from .torch_vertex import GENConv
@@ -50,7 +49,6 @@ class DeeperGCN(torch.nn.Module):
         self.block = block
         self.conv_encode_edge = conv_encode_edge
         self.add_virtual_node = add_virtual_node
-        # molhiv and molpcba
         self.mol_data = mol_data
         self.num_tasks = num_tasks
         self.emb_use_global = emb_use_global
@@ -97,16 +95,7 @@ class DeeperGCN(torch.nn.Module):
                 self.mlp_virtualnode_list.append(MLP([hidden_channels] * 3, norm=norm))
 
         for layer in range(self.num_layers):
-            if conv == "pna":
-                gcn = PNAConv(
-                    hidden_channels,
-                    hidden_channels,
-                    aggregators=["max", "min", "mean", "std"],
-                    scalers=["identity", "amplification", "attenuation"],
-                    deg=deg_hist,
-                    edge_dim=edge_feat_dim,
-                )
-            elif conv == "gen":
+            if conv == "gen":
                 gcn = GENConv(
                     hidden_channels,
                     hidden_channels,
