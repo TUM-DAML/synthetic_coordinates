@@ -169,6 +169,7 @@ def step(
 
     return np.mean(loss_list), evaluator.eval(input_dict)
 
+
 @torch.no_grad()
 def evaluate(model, device, loader, evaluator, multi_class):
     model.eval()
