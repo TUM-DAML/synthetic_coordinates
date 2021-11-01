@@ -3,6 +3,7 @@ Graph classification and regression
 models:
     DeeperGCN
     SMP
+    DimeNet++
 variants:
     basic
     basic + distance as edge feature
@@ -11,19 +12,14 @@ variants:
 """
 # flush print statements immediately to stdout so that we can see them
 # in the slurm output
-import functools
-from icgnn.transforms.misc import Finalize_Dist_Basis
-
-print = functools.partial(print, flush=True)
-
 import uuid
 from pathlib import Path
+import functools
 
 import numpy as np
 
 from sacred import Experiment
 import seml
-
 
 import torch
 from torch import optim
@@ -31,6 +27,7 @@ from torch_geometric.loader import DataLoader
 
 from warmup_scheduler import GradualWarmupScheduler
 
+from icgnn.transforms.misc import Finalize_Dist_Basis
 from icgnn.models.smp.smp import SMP, SMP_LineGraph
 from icgnn.models.deepergcn.deepergcn import DeeperGCN
 from icgnn.models.deepergcn.deepergcn_linegraph import DeeperGCN_LineGraph
@@ -66,6 +63,8 @@ from ogb.graphproppred import Evaluator
 ex = Experiment()
 seml.setup_logger(ex)
 
+print = functools.partial(print, flush=True)
+
 
 @ex.config
 def config():
@@ -99,9 +98,6 @@ def config():
     # basis dimension
     dist_basis = 4
     angle_basis = 4
-    # multiply the distance/angle embedding with the message
-    emb_product = True
-    emb_use_both = False
     # embed the angle and distance basis once globally?
     emb_basis_global = True
     # embed the angle and distance basis in each message passing layer?
@@ -114,11 +110,8 @@ def config():
     # model params
     num_layers = 12
     dropout = 0.5
-    block = "res+"
     conv_encode_edge = False
-    add_virtual_node = False
     hidden_channels = 256
-    conv = "gen"
     gcn_aggr = "mean"
     learn_t = True
     t = 0.1
@@ -135,6 +128,7 @@ def config():
     max_hours = None
     metric_graph_cutoff = False
     metric_graph_edgeattr = None
+    log = False
 
 
 class ComposeCustom(object):
@@ -170,8 +164,6 @@ def run(
     linegraph_dist,
     linegraph_angle,
     linegraph_angle_mode,
-    emb_product,
-    emb_use_both,
     emb_basis_global,
     emb_basis_local,
     emb_bottleneck,
@@ -179,11 +171,8 @@ def run(
     mlp_act,
     num_layers,
     dropout,
-    block,
     conv_encode_edge,
-    add_virtual_node,
     hidden_channels,
-    conv,
     gcn_aggr,
     learn_t,
     t,
@@ -202,6 +191,7 @@ def run(
     metric_graph_cutoff,
     metric_graph_edgeattr,
     max_hours,
+    log,
 ):
 
     # set random seed
@@ -228,7 +218,7 @@ def run(
         elif dataset_name == "QM9":
             transforms.append(QM9_Graph_To_Mol())
 
-        # create one of each transform
+        # create one of each, so that arguments can be provided
         mapping = {
             "distance_matrix": Set_Distance_Matrix(),
             "3d_coord": Set_3DCoord_Distance(),
@@ -307,7 +297,6 @@ def run(
     transforms.append(Remove_Distances())
 
     if dataset_name == "QM9":
-        # keep only the required target for QM9
         transforms.append(RemoveTargets(keep_ndx=(qm9_target_ndx,)))
     # combine all transforms
     transform = ComposeCustom(transforms)
@@ -323,26 +312,31 @@ def run(
     # Subset objects
     print("Splits:", train_set, val_set, test_set)
 
+    # variables that might be set later
+    node_encoder = None
+
     print("Preparing train list")
     train_list = get_transformed_dataset(train_set)
     print("Preparing val list")
     val_list = get_transformed_dataset(val_set)
     print("Preparing test list")
     test_list = get_transformed_dataset(test_set)
+
     print(f"Train/val/test: {len(train_list)}, {len(val_list)}, {len(test_list)}")
+
     first_graph = train_list[0]
     print("First train graph:", first_graph)
 
     # dataset-specific preparation
-    if dataset_name == "ogbg-molhiv":
+    if dataset_name == "ogbg-ppa":
+        # multi class, single task
+        num_tasks = train_set.dataset.num_classes
+        multi_class = True
+    elif dataset_name in ("ogbg-molhiv", "ogbg-molpcba"):
         # binary, multiple tasks
         num_tasks = train_set.dataset.num_tasks
         multi_class = False
         node_feat_dim = first_graph.x.shape[-1]
-        task_type, eval_metric = (
-            train_set.dataset.task_type,
-            train_set.dataset.eval_metric,
-        )
     elif dataset_name == "ZINC":
         conv_encode_edge = True
         num_tasks = 1
@@ -358,6 +352,12 @@ def run(
         eval_metric = "mae"
         node_feat_dim = first_graph.x.shape[-1]
 
+    if "ogb" in dataset_name:
+        task_type, eval_metric = (
+            train_set.dataset.task_type,
+            train_set.dataset.eval_metric,
+        )
+
     print(f"Multi class?: {multi_class}, Num tasks: {num_tasks}")
     print(f"Task type: {task_type}")
     print(f"Eval metric: {eval_metric}")
@@ -365,7 +365,8 @@ def run(
     # what is the edge attr called?
     attr = "edge_attr_g" if linegraph_dist else "edge_attr"
     edge_attr_dim = getattr(first_graph, attr).shape[-1]
-    # batch collation according to which attribute?
+
+    # batching according to this attribute
     follow = ["x_g"] if linegraph_dist else []
 
     loaders = {
@@ -393,19 +394,19 @@ def run(
     }
 
     # molecule dataset or something else?
-    mol_data = dataset_name == "ogbg-molhiv"
+    mol_data = dataset_name in ("ogbg-molhiv", "ogbg-molpcba")
     print(f"Using a molecule dataset? {mol_data}")
 
     ### pick the training loss
-    if "classification" in task_type:
+    if dataset_name == "ogbg-ppa":
+        criterion = torch.nn.CrossEntropyLoss()
+    elif "classification" in task_type:
         criterion = torch.nn.BCEWithLogitsLoss()
     else:
         criterion = torch.nn.L1Loss()
     print("Criterion:", criterion)
     ### ### ###
-
     # get the real basis dims, might have changed
-    # due to combining 2 bases
     if linegraph_dist:
         lg_node_basis = first_graph.x_lg.shape[-1]
         lg_edge_basis = first_graph.edge_attr_lg.shape[-1]
@@ -417,9 +418,7 @@ def run(
                 num_tasks,
                 num_layers,
                 dropout,
-                block,
                 hidden_channels,
-                conv,
                 gcn_aggr,
                 learn_t,
                 t,
@@ -444,11 +443,8 @@ def run(
                 num_tasks,
                 num_layers,
                 dropout,
-                block,
                 conv_encode_edge,
-                add_virtual_node,
                 hidden_channels,
-                conv,
                 gcn_aggr,
                 learn_t,
                 t,
@@ -462,9 +458,11 @@ def run(
                 node_feat_dim=node_feat_dim,
                 edge_feat_dim=edge_attr_dim,
                 mol_data=mol_data,
-                emb_product=emb_product,
+                node_encoder=node_encoder,
                 mlp_act=mlp_act,
-                emb_use_both=emb_use_both,
+                emb_basis_global=emb_basis_global,
+                emb_basis_local=emb_basis_local,
+                emb_bottleneck=emb_bottleneck,
             )
     elif model == "smp":
         print("Model: Structural Message Passing (SMP)")
@@ -475,18 +473,14 @@ def run(
                 num_classes=num_tasks,
                 num_layers=num_layers,
                 hidden=32,
-                residual=False,
                 use_edge_features=True,
-                shared_extractor=True,
                 hidden_final=hidden_channels,
-                use_batch_norm=True,
-                use_x=False,
-                map_x_to_u=True,
                 num_towers=8,
-                simplified=False,
                 lg_node_basis=lg_node_basis,
                 lg_edge_basis=lg_edge_basis,
-                graph_pooling=graph_pooling,
+                emb_basis_global=emb_basis_global,
+                emb_basis_local=emb_basis_local,
+                emb_bottleneck=emb_bottleneck,
             )
         else:
             # add 1 to node feat dim - the X matrix gets increased internally
@@ -496,15 +490,12 @@ def run(
                 num_classes=num_tasks,
                 num_layers=num_layers,
                 hidden=32,
-                residual=False,
                 use_edge_features=True,
-                shared_extractor=True,
                 hidden_final=hidden_channels,
-                use_batch_norm=True,
-                use_x=False,
-                map_x_to_u=True,
                 num_towers=8,
-                simplified=False,
+                emb_basis_global=emb_basis_global,
+                emb_basis_local=emb_basis_local,
+                emb_bottleneck=emb_bottleneck,
             )
     else:
         raise NotImplementedError
@@ -537,10 +528,12 @@ def run(
     elif dataset_name == "QM9":
         evaluator = QM9_Evaluator()
 
-    logdir = Path("runs") / str(uuid.uuid4())
-    print(f"Logging to: {logdir}")
-    if ex.current_run is not None:
-        ex.current_run.info = {"logdir": str(logdir)}
+    logdir = None
+    if log:
+        logdir = Path("runs") / str(uuid.uuid4())
+        print(f"Logging to: {logdir}")
+        if ex.current_run is not None:
+            ex.current_run.info = {"logdir": str(logdir)}
 
     # train and evaluate
     result = train_eval_model(
