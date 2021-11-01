@@ -69,6 +69,17 @@ def get_graphcls_dataset(
         dataset = PygGraphPropPredDataset(
             root=DATA_PATH, name="ogbg-molhiv", transform=transform
         )
+        split_idx = dataset.get_idx_split()
+
+        if quick_run:
+            print("----quick run----")
+            n_select = 128
+            split_idx["train"] = torch.LongTensor(range(n_select))
+            split_idx["valid"] = torch.LongTensor(range(n_select))
+            split_idx["test"] = torch.LongTensor(range(n_select))
+        train_set = Subset(dataset, split_idx["train"].numpy().tolist())
+        val_set = Subset(dataset, split_idx["valid"].numpy().tolist())
+        test_set = Subset(dataset, split_idx["test"].numpy().tolist())
     elif name == "ZINC":
         # node feature dim = 28, corresponds to use_x=False from original code
         # edge feature dim = bond type options = 3
@@ -127,19 +138,5 @@ def get_graphcls_dataset(
 
     else:
         raise NotImplementedError
-
-    # OGB datasets - keep the split
-    if name in OGB_DATASETS:
-        split_idx = dataset.get_idx_split()
-
-        if quick_run:
-            print("----quick run----")
-            n_select = 128
-            split_idx["train"] = torch.LongTensor(range(n_select))
-            split_idx["valid"] = torch.LongTensor(range(n_select))
-            split_idx["test"] = torch.LongTensor(range(n_select))
-        train_set = Subset(dataset, split_idx["train"].numpy().tolist())
-        val_set = Subset(dataset, split_idx["valid"].numpy().tolist())
-        test_set = Subset(dataset, split_idx["test"].numpy().tolist())
 
     return train_set, val_set, test_set
