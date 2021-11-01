@@ -1,18 +1,18 @@
 # Graph classification and regression
-# Models: DimeNet++, SMP, DeeperGCN
+# Models: SMP, DeeperGCN
 # Datasets: ZINC, QM9, OGB HIV
 
 seml:
   name: graph_clsreg
   executable: seml_scripts/graph_clsreg.py
   project_root_dir: ..
-  output_dir: /nfs/homedirs/yeshwant/slurm-output
+  output_dir: out
 slurm:
-  experiments_per_job: 2
+  experiments_per_job: 3
   sbatch_options:
-    gres: gpu:1       # num GPUs
-    mem: 64G          # memory
-    cpus-per-task: 8  # num cores
+    gres: gpu:1        # num GPUs
+    mem: 64G           # memory
+    cpus-per-task: 12  # num cores
     time: 6-02:00
 
 ###### BEGIN PARAMETER CONFIGURATION ######
@@ -23,11 +23,12 @@ fixed:
   batch_size: 64
   max_epochs: 3000
   max_hours: 144
+  log: True
 
   # smp, deepergcn 
   model: smp
   # ZINC, QM9, ogbg-molhiv
-  dataset_name: QM9
+  dataset_name: ZINC
 
 grid:
   seed:
@@ -55,77 +56,67 @@ baseline:
   fixed:
     add_rdkit_dist: False
     add_ppr_dist: False
+    # embed the edge attribute once globally
+    emb_basis_global: True
+    emb_basis_local: False
+    emb_bottleneck: None
 
-ppr:
+distance:
   fixed:
-    add_ppr_dist: True
-    linegraph_angle_mode: null
+    emb_basis_global: True
+    emb_basis_local: True
+    emb_bottleneck: 4
+    dist_basis: 16
+    angle_basis: 18
+  ppr:
+    fixed:
+      add_ppr_dist: True
+      linegraph_angle_mode: null
 
-  dist_only:
-    fixed:
-      conv_encode_edge: True
-      dist_basis: 8
+    dist_only:
+      fixed:
+        conv_encode_edge: True
 
-  lg_dist:
-    fixed:
-      linegraph_dist: True
-      linegraph_angle: False
-      emb_basis_global: True
-      emb_basis_local: True
-      emb_bottleneck: 4
-      dist_basis: 8
-    
-  lg_dist_angle:
-    fixed:
-      linegraph_dist: True
-      linegraph_angle: True
-      emb_basis_global: True
-      emb_basis_local: True
-      emb_bottleneck: 4
-      dist_basis: 8
-      angle_basis: 9
-
-rdkit:
-  fixed:
-    add_rdkit_dist: bounds_matrix_both
-    linegraph_angle_mode: center_both
-
-  dist_only:
-    fixed:
-      conv_encode_edge: True
-      dist_basis: 8
-
-  lg_dist:
-    fixed:
-      linegraph_dist: True
-      linegraph_angle: False
-      emb_basis_global: True
-      emb_basis_local: True
-      emb_bottleneck: 4
-      dist_basis: 8
-    
-  lg_dist_angle:
-    fixed:
-      linegraph_dist: True
-      linegraph_angle: True
-      emb_basis_global: True
-      emb_basis_local: True
-      emb_bottleneck: 4
-      dist_basis: 8
-      angle_basis: 9     
+    lg_dist:
+      fixed:
+        linegraph_dist: True
+        linegraph_angle: False
       
-both:
-  fixed:
-    add_rdkit_dist: bounds_matrix_both
-    linegraph_angle_mode: center_both
-    add_ppr_dist: True
+    lg_dist_angle:
+      fixed:
+        linegraph_dist: True
+        linegraph_angle: True
 
-  lg_dist_angle:
+  rdkit:
     fixed:
-      linegraph_dist: True
-      linegraph_angle: True
-      emb_basis_global: True
-      emb_basis_local: True
-      emb_bottleneck: 4
-      dist_basis: 8
-      angle_basis: 9 
+      add_rdkit_dist: bounds_matrix_both
+      linegraph_angle_mode: center_both
+
+    dist_only:
+      fixed:
+        conv_encode_edge: True
+
+    lg_dist:
+      fixed:
+        linegraph_dist: True
+        linegraph_angle: False
+      
+    lg_dist_angle:
+      fixed:
+        linegraph_dist: True
+        linegraph_angle: True
+        
+  both:
+    fixed:
+      add_rdkit_dist: bounds_matrix_both
+      linegraph_angle_mode: center_both
+      add_ppr_dist: True
+
+    graph_both:
+      fixed:
+        conv_encode_edge: True
+
+    lg_dist_angle:
+      fixed:
+        linegraph_dist: True
+        linegraph_angle: True
