@@ -52,9 +52,6 @@ def add_zeros(data):
 
 def get_graphcls_dataset(
     name: str,
-    split=[0.6, 0.2, 0.2],
-    icgnn=False,
-    emb_dim=None,
     transform=None,
     quick_run=False,
 ) -> InMemoryDataset:
@@ -137,7 +134,7 @@ def get_graphcls_dataset(
 
         if quick_run:
             print("----quick run----")
-            n_select = 32
+            n_select = 128
             split_idx["train"] = torch.LongTensor(range(n_select))
             split_idx["valid"] = torch.LongTensor(range(n_select))
             split_idx["test"] = torch.LongTensor(range(n_select))
