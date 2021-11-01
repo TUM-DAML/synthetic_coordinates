@@ -23,7 +23,6 @@ class GENConv_Linegraph(GenMessagePassing):
         learn_p=False,
         msg_norm=False,
         learn_msg_scale=True,
-        edge_attr_dim=None,
         norm="batch",
         mlp_layers=2,
         mlp_act="relu",
@@ -44,9 +43,6 @@ class GENConv_Linegraph(GenMessagePassing):
         channels_list.append(emb_dim)
 
         self.mlp = MLP(channels=channels_list, norm=norm, last_lin=False, act=mlp_act)
-
-        self.msg_encoder = torch.nn.ReLU()
-        self.eps = 1e-7
 
         if emb_basis_local:
             # has the basis been embedded to the bottleneck globally?
@@ -75,17 +71,22 @@ class GENConv_Linegraph(GenMessagePassing):
             self.emb_node_basis = Identity()
             self.emb_edge_basis = Identity()
 
-        # embed the message a few times
+        # Linear layers similar to DimeNet
         self.msg_emb1 = Linear(emb_dim, emb_dim)
         self.msg_emb2 = Linear(emb_dim, emb_dim, bias=False)
         self.msg_emb3 = Linear(emb_dim, emb_dim, bias=False)
 
-        if msg_norm:
-            self.msg_norm = MsgNorm(learn_msg_scale=learn_msg_scale)
-        else:
-            self.msg_norm = Identity()
+        self.msg_norm = MsgNorm(learn_msg_scale=learn_msg_scale) if msg_norm else Identity()
 
     def forward(self, x, edge_index, node_basis, edge_basis):
+        """
+        Pass the whole linegraph through the layer
+        x: input embedding on nodes
+        edge_index
+        node_basis: feature for each node
+        edge_basis: feature for each edge
+        """
+        # start the message passing, get messages for each node
         m = self.propagate(
             edge_index, x=x, node_basis=node_basis, edge_basis=edge_basis
         )
@@ -100,6 +101,11 @@ class GENConv_Linegraph(GenMessagePassing):
     def message(self, x_j, node_basis_i, edge_basis):
         """
         Message passing: Dimenet interaction layer
+
+        at a node i, for each neighbor j
+        x_j: the embedding at the neighbor
+        node_basis_i: basis vector at the current node
+        edge_basis:
         """
         msg1 = x_j * self.emb_node_basis(node_basis_i)
         msg2 = self.msg_emb2(msg1)
@@ -129,17 +135,13 @@ class GENConv(GenMessagePassing):
         learn_p=False,
         msg_norm=False,
         learn_msg_scale=True,
-        encode_edge=False,
-        bond_encoder=False,
         edge_feat_dim=None,
         norm="batch",
         mlp_layers=2,
-        eps=1e-7,
-        emb_product=True,
         mlp_act="relu",
-        emb_attrs=True,
-        emb_use_both=False,
-        emb_bottleneck=False,
+        emb_basis_global=True,
+        emb_basis_local=True,
+        emb_bottleneck=4,
     ):
 
         super(GENConv, self).__init__(
@@ -155,96 +157,50 @@ class GENConv(GenMessagePassing):
 
         self.mlp = MLP(channels=channels_list, norm=norm, last_lin=False, act=mlp_act)
 
-        self.msg_encoder = torch.nn.ReLU()
-        self.eps = eps
-
-        self.emb_attrs = emb_attrs
-        self.emb_product = emb_product
-        self.emb_use_both = emb_use_both
-        # extra layers to implement Dimenet architecture
-
-        if self.emb_product and self.emb_use_both:
-            # project the (distance_embedding*x) once before multiplying with
-            # angle embedding
-            self.linear_intermediate = Linear(emb_dim, emb_dim, bias=False)
-            # need to emb the attributes, or do we get the global embedding?
-            if self.emb_attrs:
+        if emb_basis_local:
+            # has the basis been embedded to the bottleneck globally?
+            if emb_basis_global:
+                # then do bottleneck->hidden
+                self.emb_edge_attr = Linear(emb_bottleneck, emb_dim)
+            else:
+                # need to embed the basis here
                 if emb_bottleneck:
-                    # use 2 linear layers to project
-                    # d -> bottleneck -> d
-                    self.linear_target_x = Sequential(
-                        Linear(emb_dim, emb_bottleneck, bias=False),
-                        Linear(emb_bottleneck, emb_dim, bias=False),
-                    )
-                    self.linear_edgeattr = Sequential(
-                        Linear(emb_dim, emb_bottleneck, bias=False),
-                        Linear(emb_bottleneck, emb_dim, bias=False),
+                    # basis->bottleneck->hidden
+                    self.emb_edge_attr = Sequential(
+                        Linear(edge_feat_dim, emb_bottleneck),
+                        Linear(emb_bottleneck, emb_dim),
                     )
                 else:
-                    # use 1 linear layer to project, d -> d
-                    self.linear_target_x = Linear(emb_dim, emb_dim, bias=False)
-                    self.linear_edgeattr = Linear(emb_dim, emb_dim, bias=False)
-            else:
-                self.linear_target_x = Identity()
-                self.linear_edgeattr = Identity()
-
-        self.msg_norm = msg_norm
-        self.encode_edge = encode_edge
-        self.bond_encoder = bond_encoder
-
-        if msg_norm:
-            self.msg_norm = MsgNorm(learn_msg_scale=learn_msg_scale)
+                    # basis->hidden
+                    self.emb_edge_attr = Linear(edge_feat_dim, emb_dim)
         else:
-            self.msg_norm = None
+            # basis already embedded to emb_dim
+            self.emb_edge_attr = Identity()
 
-        if self.encode_edge:
-            if self.bond_encoder:
-                self.edge_encoder = BondEncoder(emb_dim=emb_dim)
-            else:
-                self.edge_encoder = torch.nn.Linear(edge_feat_dim, emb_dim)
+        # Linear layers similar to DimeNet
+        self.msg_emb1 = Linear(emb_dim, emb_dim)
+        self.msg_emb2 = Linear(emb_dim, emb_dim, bias=False)
 
-    def forward(self, x, edge_index, edge_attr=None, x_orig=None):
+        self.msg_norm = MsgNorm(learn_msg_scale=learn_msg_scale) if msg_norm else Identity()
+
+    def forward(self, x, edge_index, edge_attr):
         """
         x: input node embedding at this layer
         edge_index: usual
-        edge_attr: usual
-        x_orig: an older value of x, can be the input to the whole GCN or
-                edge_dist_basis in case of linegraph
+        edge_attr: usual (may include the distance basis)
         """
-        if self.encode_edge and edge_attr is not None:
-            edge_emb = self.edge_encoder(edge_attr)
-        else:
-            edge_emb = edge_attr
-
-        m = self.propagate(edge_index, x=x, edge_attr=edge_emb, x_orig=x_orig)
-
-        if self.msg_norm is not None:
-            m = self.msg_norm(x, m)
-
+        m = self.propagate(edge_index, x=x, edge_attr=edge_attr)
+        m = self.msg_norm(m)
         h = x + m
         out = self.mlp(h)
 
         return out
 
-    def message(self, x_j, edge_attr=None, x_orig_i=None):
-        if edge_attr is not None:
-            # multiply or add?
-            if self.emb_product:
-                if self.emb_use_both:
-                    # multiply with the original X
-                    msg1 = x_j * self.linear_target_x(x_orig_i)
-                    # project it once
-                    msg2 = self.linear_intermediate(msg1)
-                    # multiply with the edge feature
-                    msg = msg2 * self.linear_edgeattr(edge_attr)
-                else:
-                    msg = x_j * edge_attr
-            else:
-                msg = x_j + edge_attr
-        else:
-            msg = x_j
+    def message(self, x_j, edge_attr):
+        msg1 = self.msg_emb1(x_j) * self.emb_edge_attr(edge_attr)
+        msg2 = self.msg_emb2(msg1)
 
-        return self.msg_encoder(msg) + self.eps
+        return msg2
 
     def update(self, aggr_out):
         return aggr_out

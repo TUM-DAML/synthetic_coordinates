@@ -23,9 +23,7 @@ class DeeperGCN_LineGraph(torch.nn.Module):
         num_tasks=None,
         num_layers=7,
         dropout=0.2,
-        block="res+",
         hidden_channels=256,
-        conv="gen",
         gcn_aggr="softmax",
         learn_t=True,
         t=1.0,
@@ -41,9 +39,10 @@ class DeeperGCN_LineGraph(torch.nn.Module):
         mlp_act="relu",
         lg_node_basis=4,
         lg_edge_basis=4,
+        # options for distance and angle basis
         emb_basis_global=True,
-        emb_basis_local=False,
-        emb_bottleneck=False,
+        emb_basis_local=True,
+        emb_bottleneck=4,
     ):
         super().__init__()
         self.dropout = dropout
@@ -61,6 +60,7 @@ class DeeperGCN_LineGraph(torch.nn.Module):
             "max": global_max_pool,
         }[graph_pooling]
 
+        # nodes and edges have extra basis = distances, angles
         if emb_basis_global:
             if emb_bottleneck:
                 if emb_basis_local:
@@ -89,42 +89,31 @@ class DeeperGCN_LineGraph(torch.nn.Module):
             self.global_emb_node_basis = nn.Identity()
             self.global_emb_edge_basis = nn.Identity()
 
-        self.block = block
-        if self.block == "res+":
-            print("LN/BN->ReLU->GraphConv->Res")
-        else:
-            raise Exception("Unknown block Type")
-
         self.gcns = nn.ModuleList()
         self.norms = nn.ModuleList()
 
-        self.conv = conv
         self.num_layers = num_layers
 
         for _ in range(num_layers):
-            if conv == "gen":
-                gcn = GENConv_Linegraph(
-                    hidden_channels,
-                    hidden_channels,
-                    aggr=gcn_aggr,
-                    t=t,
-                    learn_t=learn_t,
-                    p=p,
-                    learn_p=learn_p,
-                    msg_norm=msg_norm,
-                    learn_msg_scale=learn_msg_scale,
-                    edge_attr_dim=edge_attr_dim,
-                    norm=norm,
-                    mlp_layers=mlp_layers,
-                    mlp_act=mlp_act,
-                    lg_node_basis=lg_node_basis,
-                    lg_edge_basis=lg_edge_basis,
-                    emb_basis_global=emb_basis_global,
-                    emb_basis_local=emb_basis_local,
-                    emb_bottleneck=emb_bottleneck,
-                )
-            else:
-                raise Exception("Unknown Conv Type")
+            gcn = GENConv_Linegraph(
+                hidden_channels,
+                hidden_channels,
+                aggr=gcn_aggr,
+                t=t,
+                learn_t=learn_t,
+                p=p,
+                learn_p=learn_p,
+                msg_norm=msg_norm,
+                learn_msg_scale=learn_msg_scale,
+                norm=norm,
+                mlp_layers=mlp_layers,
+                mlp_act=mlp_act,
+                lg_node_basis=lg_node_basis,
+                lg_edge_basis=lg_edge_basis,
+                emb_basis_global=emb_basis_global,
+                emb_basis_local=emb_basis_local,
+                emb_bottleneck=emb_bottleneck,
+            )
             self.gcns.append(gcn)
             self.norms.append(norm_layer(norm, hidden_channels))
 
@@ -147,24 +136,22 @@ class DeeperGCN_LineGraph(torch.nn.Module):
         node_basis = self.global_emb_node_basis(batch.edge_dist_basis)
         edge_basis = self.global_emb_edge_basis(batch.edge_attr_lg)
 
-        if self.block == "res+":
-            if self.conv == "gen":
-                h = self.gcns[0](h, edge_index, node_basis, edge_basis)
+        h = self.gcns[0](h, edge_index, node_basis, edge_basis)
 
-            for layer in range(1, self.num_layers):
-                # norm-relu-dropout-GCN
-                # batch/instance/layer norm
-                h1 = self.norms[layer - 1](h)
-                # relu before GCN, so that layer output can be negative
-                h2 = F.relu(h1)
-                h2 = F.dropout(h2, p=self.dropout, training=self.training)
+        for layer in range(1, self.num_layers):
+            # norm-relu-dropout-GCN
+            # batch/instance/layer norm
+            h1 = self.norms[layer - 1](h)
+            # relu before GCN, so that layer output can be negative
+            h2 = F.relu(h1)
+            h2 = F.dropout(h2, p=self.dropout, training=self.training)
 
-                if self.conv == "gen":
-                    h = self.gcns[layer](h2, edge_index, node_basis, edge_basis) + h
+            # local embedding is inside the GCN layer
+            h = self.gcns[layer](h2, edge_index, node_basis, edge_basis) + h
 
-            # last norm layer
-            h = self.norms[self.num_layers - 1](h)
-            h = F.dropout(h, p=self.dropout, training=self.training)
+        # last norm layer
+        h = self.norms[self.num_layers - 1](h)
+        h = F.dropout(h, p=self.dropout, training=self.training)
 
         final_node_emb = torch_scatter.scatter_add(
             h, batch.edge_index_g[1], dim=0, dim_size=batch.x_g.shape[0]
