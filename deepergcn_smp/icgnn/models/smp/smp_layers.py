@@ -94,47 +94,6 @@ class FastSMPLayer(MessagePassing):
 
 class SMPLayer(MessagePassing):
     def __init__(
-        self, in_features: int, num_towers: int, out_features: int, use_x: bool
-    ):
-        super().__init__(aggr="add", node_dim=-3)
-        self.use_x = use_x
-        self.in_u, self.out_u = in_features, out_features
-        if use_x:
-            self.message_nn = XtoX(in_features, out_features, bias=True)
-            self.order2_i = EntryWiseX(out_features, out_features, num_towers)
-            self.order2_j = EntryWiseX(out_features, out_features, num_towers)
-            self.order2 = EntryWiseX(out_features, out_features, num_towers)
-        else:
-            self.message_nn = UtoU(
-                in_features, out_features, n_groups=num_towers, residual=False
-            )
-            self.order2_i = EntrywiseU(out_features, out_features, num_towers)
-            self.order2_j = EntrywiseU(out_features, out_features, num_towers)
-            self.order2 = EntrywiseU(out_features, out_features, num_towers)
-        self.update1 = nn.Linear(2 * out_features, out_features)
-        self.update2 = nn.Linear(out_features, out_features)
-
-    def forward(self, u, edge_index, batch_info):
-        n = batch_info["num_nodes"]
-        u = self.message_nn(u, batch_info)
-        u1 = self.order2_i(u)
-        u2 = self.order2_j(u)
-        new_u = self.propagate(edge_index, size=(n, n), u=u, u1=u1, u2=u2)
-        new_u /= batch_info["average_edges"]
-        return new_u
-
-    def message(self, u_j, u1_i, u2_j):
-        order2 = self.order2(torch.relu(u1_i + u2_j))
-        return order2
-
-    def update(self, aggr_u, u):
-        up1 = self.update1(torch.cat((u, aggr_u), dim=-1))
-        up2 = up1 + self.update2(up1)
-        return up2
-
-
-class SMPLayer(MessagePassing):
-    def __init__(
         self,
         in_features: int,
         num_towers: int,
@@ -168,13 +127,24 @@ class SMPLayer(MessagePassing):
         self.update1 = nn.Linear(2 * out_features, out_features)
         self.update2 = nn.Linear(out_features, out_features)
 
-    def forward(self, u, edge_index, edge_attr, batch_info):
+    def forward(self, u, edge_index, edge_attr, batch_info, dist_basis=None):
         n = batch_info["num_nodes"]
         u = self.message_nn(u, batch_info)
         u1 = self.order2_i(u)
         u2 = self.order2_j(u)
+
+        if dist_basis is not None:
+            # add an extra dimension to dist basis
+            dist_basis = dist_basis.unsqueeze(1)
+
         new_u = self.propagate(
-            edge_index, size=(n, n), u=u, u1=u1, u2=u2, edge_attr=edge_attr
+            edge_index,
+            size=(n, n),
+            u=u,
+            u1=u1,
+            u2=u2,
+            edge_attr=edge_attr,
+            dist_basis=dist_basis,
         )
         new_u /= (
             batch_info["average_edges"][:, :, 0]
@@ -183,7 +153,15 @@ class SMPLayer(MessagePassing):
         )
         return new_u
 
-    def message(self, u_j, u1_i, u2_j, edge_attr):
+    def message(self, u_j, u1_i, u2_j, edge_attr, dist_basis_i=None):
+        """
+        dist_basis_i: extra feature of the node in the linegraph
+        """
+        if dist_basis_i is not None:
+            # multiply the edge attr with the target node's dist basis
+            # remove the extra dim from dist basis
+            edge_attr = edge_attr * dist_basis_i.squeeze()
+
         edge_feat = self.edge_nn(edge_attr) if self.use_edge_features else 0
         if not self.use_x:
             edge_feat = edge_feat.unsqueeze(1)
