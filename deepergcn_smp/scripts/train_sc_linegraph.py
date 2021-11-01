@@ -19,9 +19,9 @@ result = run(
     seed=0,
     # our new features
     add_ppr_dist=False,
-    add_rdkit_dist=False,
-    linegraph_dist=False,
-    linegraph_angle=False,
+    add_rdkit_dist='bounds_matrix_both',
+    linegraph_dist=True,
+    linegraph_angle=True,
     linegraph_angle_mode="center_both",
     # basis dimension
     dist_basis=16,
@@ -29,8 +29,8 @@ result = run(
     angle_basis=18,
     # multiply the distance/angle embedding with the message
     emb_basis_global=True,
-    emb_basis_local=False,
-    emb_bottleneck=None,
+    emb_basis_local=True,
+    emb_bottleneck=4,
     # model params
     num_layers=12,
     hidden_channels=128,
@@ -57,4 +57,5 @@ result = run(
     # log metrics and losses to tensorboard
     log=False,
 )
+
 print(result["best_val"], result["final_test"])

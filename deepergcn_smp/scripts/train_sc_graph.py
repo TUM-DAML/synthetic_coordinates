@@ -27,16 +27,17 @@ result = run(
     dist_basis=16,
     dist_basis_type="gaussian",
     angle_basis=18,
-    # multiply the distance/angle embedding with the message
+    # how to use the basis if present
     emb_basis_global=True,
     emb_basis_local=True,
     emb_bottleneck=4,
     # model params
-    mlp_act="relu",
     num_layers=12,
+    hidden_channels=128,
+    # deepergcn model params
+    mlp_act="relu",
     dropout=0.2,
     conv_encode_edge=True,
-    hidden_channels=128,
     gcn_aggr="softmax",
     learn_t=True,
     t=0.1,
@@ -47,9 +48,13 @@ result = run(
     norm="batch",
     mlp_layers=1,
     graph_pooling="mean",
+    # target to predict in QM9
     qm9_target_ndx=7,
-    quick_run=True,
+    # run on a subset of data
+    quick_run=False,
+    # max time to run
     max_hours=144,
+    # log metrics and losses to tensorboard
     log=False,
 )
 
