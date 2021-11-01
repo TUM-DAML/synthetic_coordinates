@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-from collections import defaultdict
 import time
 
 from torch.utils.tensorboard import SummaryWriter
@@ -23,12 +22,11 @@ def train_eval_model(
     max_hours=None,
     logdir="logs/output",
 ):
-    losses, metrics = defaultdict(list), defaultdict(list)
     best_val = np.inf if task_type == "regression" else 0
 
     start_time = time.time()
 
-    writer = SummaryWriter(logdir)
+    writer = SummaryWriter(logdir) if logdir else None
 
     for epoch in range(max_epochs):
         # check if we need to stop after N hours
@@ -56,7 +54,8 @@ def train_eval_model(
 
         if scheduler:
             current_lr = optim.param_groups[0]["lr"]
-            writer.add_scalar("lr", current_lr, epoch)
+            if writer:
+                writer.add_scalar("lr", current_lr, epoch)
 
             # check if lr is below the limit
             if current_lr < min_lr:
@@ -67,10 +66,11 @@ def train_eval_model(
 
         train_metric, val_metric = train_result[eval_metric], val_result[eval_metric]
 
-        writer.add_scalar("loss/train", train_loss, epoch)
-        writer.add_scalar("loss/val", val_loss, epoch)
-        writer.add_scalar("metric/train", train_metric, epoch)
-        writer.add_scalar("metric/val", val_metric, epoch)
+        if writer:
+            writer.add_scalar("loss/train", train_loss, epoch)
+            writer.add_scalar("loss/val", val_loss, epoch)
+            writer.add_scalar("metric/train", train_metric, epoch)
+            writer.add_scalar("metric/val", val_metric, epoch)
 
         print(
             f"Epoch:{epoch} tloss: {train_loss:.4f} vloss: {val_loss:.4f} tmetric: {train_metric:.4f} vmetric: {val_metric:.4f}"
@@ -89,7 +89,8 @@ def train_eval_model(
             )[eval_metric]
 
             print(f"Val metric improved, test metric now: {final_test:.4f}")
-            writer.add_scalar("metric/test", final_test, epoch)
+            if writer:
+                writer.add_scalar("metric/test", final_test, epoch)
 
     return {"best_val": best_val, "final_test": final_test}
 

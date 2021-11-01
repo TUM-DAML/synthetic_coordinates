@@ -15,7 +15,6 @@ class SMP(torch.nn.Module):
         num_edge_features: int,
         num_classes: int,
         num_layers: int,
-        hidden: int,
         hidden_final: int,
         num_towers: int,
         emb_basis_global=True,
@@ -25,7 +24,6 @@ class SMP(torch.nn.Module):
         """num_input_features: number of node features
         num_edge_features: number of edge features
         num_classes: output dimension
-        hidden: number of channels of the local contexts
         hidden_final: number of channels after extraction of graph features
         num_towers: inside each SMP layers, use towers to reduce the number of parameters
         """
@@ -37,6 +35,7 @@ class SMP(torch.nn.Module):
         self.no_prop = GraphExtractor(
             in_features=num_input_features, out_features=hidden_final, use_x=False
         )
+        hidden = 32
         self.initial_lin = nn.Linear(num_input_features, hidden)
 
         # create one global emb layer for the edgeattr
@@ -102,9 +101,7 @@ class SMP(torch.nn.Module):
         for i in range(len(self.convs)):
             conv = self.convs[i]
             bn = self.batch_norm_list[i]
-            extractor = (
-                self.feature_extractor
-            )
+            extractor = self.feature_extractor
             if i > 0:
                 u = bn(u)
 
@@ -112,7 +109,7 @@ class SMP(torch.nn.Module):
             edge_emb_local = self.emb_edge_attrs[i](edge_emb)
 
             u = conv(u, edge_index, edge_emb_local, batch_info) + u
-                
+
             global_features = extractor.forward(u, batch_info)
             out += global_features / len(self.convs)
 
@@ -132,7 +129,6 @@ class SMP_LineGraph(torch.nn.Module):
         num_edge_features: int,
         num_classes: int,
         num_layers: int,
-        hidden: int,
         hidden_final: int,
         num_towers: int,
         # extra args for linegraph message passing
@@ -150,6 +146,7 @@ class SMP_LineGraph(torch.nn.Module):
 
         self.num_classes = num_classes
 
+        hidden = 32
         # graph x encoder
         self.node_features_encoder = torch.nn.Linear(num_input_features, hidden)
         # layer to embed the LG node message
@@ -273,9 +270,7 @@ class SMP_LineGraph(torch.nn.Module):
         for i in range(len(self.convs)):
             conv = self.convs[i]
             bn = self.batch_norm_list[i]
-            extractor = (
-                self.feature_extractor
-            )
+            extractor = self.feature_extractor
             if i > 0:
                 u = bn(u)
 
@@ -286,9 +281,12 @@ class SMP_LineGraph(torch.nn.Module):
             edge_emb_local = self.local_emb_angle_basis[i](edge_emb_global)
 
             # conv as usual
-            u = conv(
-                u, edge_index, edge_emb_local, batch_info, dist_basis=dist_emb_local
-            ) + u
+            u = (
+                conv(
+                    u, edge_index, edge_emb_local, batch_info, dist_basis=dist_emb_local
+                )
+                + u
+            )
             global_features = extractor.forward(u, batch_info)
             out += global_features / len(self.convs)
 

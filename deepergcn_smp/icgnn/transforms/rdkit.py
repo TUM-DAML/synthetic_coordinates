@@ -201,25 +201,9 @@ class Set_BoundsMatBoth_Distance:
         self,
         num_dist_basis=4,
         dist_basis_type="gaussian",
-        metric_graph_cutoff=None,
-        metric_graph_edgeattr=None,
     ):
-        """
-        metric_graph_cutoff: set new edges within this distance
-        metric_graph_edgeattr:
-            const: set constant edge attr to the new edges
-            keep: keep existing edge attrs for old edges, const value for new edges
-        """
         self.num_dist_basis = num_dist_basis
         self.dist_basis_type = dist_basis_type
-
-        self.metric_graph_cutoff = metric_graph_cutoff
-        self.metric_graph_edgeattr = metric_graph_edgeattr
-
-        if self.metric_graph_cutoff:
-            print(
-                f"(transform) BM-both: Using metric graph. Edge attr method: {self.metric_graph_edgeattr}"
-            )
 
     def __call__(self, sample):
         # sample contains the graph and molecule
@@ -229,38 +213,6 @@ class Set_BoundsMatBoth_Distance:
 
         max_dist = get_upper_tri_distances(bm)
         min_dist = get_upper_tri_distances(bm.T)
-
-        if self.metric_graph_cutoff:
-            # dim of the existing edge attr
-            old_edge_ndx = graph.edge_index.clone()
-            graph.edge_index = torch.LongTensor(
-                get_radius_graph_from_distmat(min_dist, self.metric_graph_cutoff)
-            )
-            edge_attr_dim = graph.edge_attr.shape[-1]
-            num_new_edges = graph.edge_index.shape[-1]
-
-            # replace all edge attr with zeros
-            if self.metric_graph_edgeattr == "const":
-                graph.edge_attr = torch.zeros((num_new_edges, edge_attr_dim))
-            # existing edges: edge attr + 0
-            # new edges: 0 0 0.. + 1
-            elif self.metric_graph_edgeattr == "keep":
-                # matrix of 0s
-                new_edge_attr = torch.zeros(
-                    (graph.num_nodes, graph.num_nodes, edge_attr_dim + 1)
-                )
-                row, col = graph.edge_index
-                # set last bit to 1 for *all* new edges
-                new_edge_attr[row, col, -1] = 1
-
-                old_row, old_col = old_edge_ndx
-                # existing edges: last bit is 0
-                new_edge_attr[old_row, old_col, -1] = 0
-                # remaining: insert the edge attr
-                new_edge_attr[old_row, old_col, :-1] = graph.edge_attr
-
-                # get the required edge_attr
-                graph.edge_attr = new_edge_attr[row, col]
 
         # get the distance for every edge
         # graph edge index

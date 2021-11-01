@@ -76,7 +76,9 @@ class GENConv_Linegraph(GenMessagePassing):
         self.msg_emb2 = Linear(emb_dim, emb_dim, bias=False)
         self.msg_emb3 = Linear(emb_dim, emb_dim, bias=False)
 
-        self.msg_norm = MsgNorm(learn_msg_scale=learn_msg_scale) if msg_norm else Identity()
+        self.msg_norm = (
+            MsgNorm(learn_msg_scale=learn_msg_scale) if msg_norm else Identity()
+        )
 
     def forward(self, x, edge_index, node_basis, edge_basis):
         """
@@ -181,7 +183,9 @@ class GENConv(GenMessagePassing):
         self.msg_emb1 = Linear(emb_dim, emb_dim)
         self.msg_emb2 = Linear(emb_dim, emb_dim, bias=False)
 
-        self.msg_norm = MsgNorm(learn_msg_scale=learn_msg_scale) if msg_norm else Identity()
+        self.msg_norm = (
+            MsgNorm(learn_msg_scale=learn_msg_scale) if msg_norm else Identity()
+        )
 
     def forward(self, x, edge_index, edge_attr):
         """

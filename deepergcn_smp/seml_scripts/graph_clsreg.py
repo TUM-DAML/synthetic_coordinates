@@ -3,7 +3,6 @@ Graph classification and regression
 models:
     DeeperGCN
     SMP
-    DimeNet++
 variants:
     basic
     basic + distance as edge feature
@@ -126,8 +125,6 @@ def config():
     mlp_act = "relu"
     qm9_target_ndx = None
     max_hours = None
-    metric_graph_cutoff = False
-    metric_graph_edgeattr = None
     log = False
 
 
@@ -188,8 +185,6 @@ def run(
     angle_basis,
     dist_basis_type,
     qm9_target_ndx,
-    metric_graph_cutoff,
-    metric_graph_edgeattr,
     max_hours,
     log,
 ):
@@ -229,8 +224,6 @@ def run(
             "bounds_matrix_both": Set_BoundsMatBoth_Distance(
                 num_dist_basis=dist_basis,
                 dist_basis_type=dist_basis_type,
-                metric_graph_cutoff=metric_graph_cutoff,
-                metric_graph_edgeattr=metric_graph_edgeattr,
             ),
         }
         if add_rdkit_dist in mapping:
@@ -327,16 +320,15 @@ def run(
     first_graph = train_list[0]
     print("First train graph:", first_graph)
 
-    # dataset-specific preparation
-    if dataset_name == "ogbg-ppa":
-        # multi class, single task
-        num_tasks = train_set.dataset.num_classes
-        multi_class = True
-    elif dataset_name in ("ogbg-molhiv", "ogbg-molpcba"):
+    if dataset_name == "ogbg-molhiv":
         # binary, multiple tasks
         num_tasks = train_set.dataset.num_tasks
         multi_class = False
         node_feat_dim = first_graph.x.shape[-1]
+        task_type, eval_metric = (
+            train_set.dataset.task_type,
+            train_set.dataset.eval_metric,
+        )
     elif dataset_name == "ZINC":
         conv_encode_edge = True
         num_tasks = 1
@@ -351,12 +343,6 @@ def run(
         task_type = "regression"
         eval_metric = "mae"
         node_feat_dim = first_graph.x.shape[-1]
-
-    if "ogb" in dataset_name:
-        task_type, eval_metric = (
-            train_set.dataset.task_type,
-            train_set.dataset.eval_metric,
-        )
 
     print(f"Multi class?: {multi_class}, Num tasks: {num_tasks}")
     print(f"Task type: {task_type}")
@@ -394,13 +380,11 @@ def run(
     }
 
     # molecule dataset or something else?
-    mol_data = dataset_name in ("ogbg-molhiv", "ogbg-molpcba")
+    mol_data = dataset_name == "ogbg-molhiv"
     print(f"Using a molecule dataset? {mol_data}")
 
     ### pick the training loss
-    if dataset_name == "ogbg-ppa":
-        criterion = torch.nn.CrossEntropyLoss()
-    elif "classification" in task_type:
+    if "classification" in task_type:
         criterion = torch.nn.BCEWithLogitsLoss()
     else:
         criterion = torch.nn.L1Loss()
@@ -472,8 +456,6 @@ def run(
                 num_edge_features=edge_attr_dim,
                 num_classes=num_tasks,
                 num_layers=num_layers,
-                hidden=32,
-                use_edge_features=True,
                 hidden_final=hidden_channels,
                 num_towers=8,
                 lg_node_basis=lg_node_basis,
@@ -489,8 +471,6 @@ def run(
                 num_edge_features=edge_attr_dim,
                 num_classes=num_tasks,
                 num_layers=num_layers,
-                hidden=32,
-                use_edge_features=True,
                 hidden_final=hidden_channels,
                 num_towers=8,
                 emb_basis_global=emb_basis_global,
