@@ -1,11 +1,6 @@
-"""
-ICGNN version of the TUDataset
-Includes the original graphs in the TUDataset
-https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/datasets/tu_dataset.html#TUDataset
-
-along with VERSE embeddings, linegraph, distances between nodes
-and angles between edges
-"""
+'''
+Class that contains a linegraph and the original graph
+'''
 
 from functools import partial
 
