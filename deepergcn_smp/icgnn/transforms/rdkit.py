@@ -12,7 +12,7 @@ from rdkit.Chem import rdDistGeom as molDG
 
 from ..models.basis import get_dist_basis
 from icgnn.models.embeddings import pairwise_distance
-from icgnn.transforms.misc import get_radius_graph_from_distmat, set_or_append
+from icgnn.transforms.misc import set_or_append
 
 
 class Set_Edge_Dist:

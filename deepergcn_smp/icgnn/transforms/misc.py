@@ -1,38 +1,4 @@
 import torch
-import numpy as np
-
-
-def get_radius_graph_from_lengths(edge_ndx, edge_lengths, cutoff=5):
-    """
-    edge_ndx: current edge_ndx
-    edge_lengths: length of each edge
-    """
-    keep = edge_lengths < cutoff
-    new_edge_ndx = edge_ndx[:, keep]
-
-    return new_edge_ndx, keep
-
-
-def get_radius_graph_from_distmat(dist, cutoff=5):
-    """
-    dist: (N, N) matrix of distances between graph nodes
-    edge_ndx: current edge_ndx
-    cutoff: threshold distance for edges in same units as the distance
-
-    return: (E', 2) new edge index of the graph
-    mask: mask into old edge_ndx to indicate which edges have been selected
-    """
-    # keep only 1 copy of the distances to avoid repeated edges
-    tmp_dist = np.triu(dist.copy())
-    # rest of the values become 0 - set them to inf to cutoff
-    tmp_dist[tmp_dist == 0] = np.inf
-    # apply the cutoff, get true/false
-    keep = tmp_dist < cutoff
-    # find indices of all true values and stack into (2, E)
-    new_edge_ndx = np.vstack(np.nonzero(keep))
-
-    return new_edge_ndx
-
 
 class Finalize_Dist_Basis:
     def __init__(self):
