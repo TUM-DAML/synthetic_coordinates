@@ -2,7 +2,6 @@
 Transform graph using the PPR as a distance
 and angles based on this distance
 """
-import copy
 
 import numpy as np
 

@@ -1,16 +1,7 @@
-from copy import deepcopy
-from functools import partial
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch_scatter import scatter
-from torch_geometric.utils import get_laplacian
 
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem.rdmolops import FastFindRings
-
-from ogb.utils.features import get_atom_feature_dims
 
 from icgnn.transforms.rdkit_utils import (
     get_chiral_tag,
