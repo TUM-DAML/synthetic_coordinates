@@ -28,7 +28,6 @@ class DeeperGCN(torch.nn.Module):
         node_feat_dim=None,
         edge_feat_dim=None,
         mol_data=True,
-        node_encoder=None,
         mlp_act="relu",
         # embedding options
         # embed the basis globally - once for the whole network
@@ -45,7 +44,6 @@ class DeeperGCN(torch.nn.Module):
         self.conv_encode_edge = conv_encode_edge
         # molhiv dataset
         self.mol_data = mol_data
-        self.node_encoder = node_encoder
         self.num_tasks = num_tasks
 
         self.learn_t = learn_t
