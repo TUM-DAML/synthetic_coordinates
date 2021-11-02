@@ -16,7 +16,6 @@ class SMP(torch.nn.Module):
         num_classes: int,
         num_layers: int,
         hidden_final: int,
-        num_towers: int,
         emb_basis_global=True,
         emb_basis_local=True,
         emb_bottleneck=4,
@@ -25,7 +24,6 @@ class SMP(torch.nn.Module):
         num_edge_features: number of edge features
         num_classes: output dimension
         hidden_final: number of channels after extraction of graph features
-        num_towers: inside each SMP layers, use towers to reduce the number of parameters
         """
         super().__init__()
         self.edge_counter = EdgeCounter()
@@ -62,7 +60,7 @@ class SMP(torch.nn.Module):
             self.convs.append(
                 SMPLayer(
                     in_features=hidden,
-                    num_towers=num_towers,
+                    num_towers=8,
                     out_features=hidden,
                     edge_features=hidden,
                     use_x=False,
@@ -130,7 +128,6 @@ class SMP_LineGraph(torch.nn.Module):
         num_classes: int,
         num_layers: int,
         hidden_final: int,
-        num_towers: int,
         # extra args for linegraph message passing
         lg_node_basis=4,
         lg_edge_basis=4,
@@ -203,7 +200,7 @@ class SMP_LineGraph(torch.nn.Module):
             self.convs.append(
                 SMPLayer(
                     in_features=hidden,
-                    num_towers=num_towers,
+                    num_towers=8,
                     out_features=hidden,
                     edge_features=hidden,
                     use_x=False,

@@ -305,9 +305,6 @@ def run(
     # Subset objects
     print("Splits:", train_set, val_set, test_set)
 
-    # variables that might be set later
-    node_encoder = None
-
     print("Preparing train list")
     train_list = get_transformed_dataset(train_set)
     print("Preparing val list")
@@ -442,7 +439,6 @@ def run(
                 node_feat_dim=node_feat_dim,
                 edge_feat_dim=edge_attr_dim,
                 mol_data=mol_data,
-                node_encoder=node_encoder,
                 mlp_act=mlp_act,
                 emb_basis_global=emb_basis_global,
                 emb_basis_local=emb_basis_local,
@@ -457,7 +453,6 @@ def run(
                 num_classes=num_tasks,
                 num_layers=num_layers,
                 hidden_final=hidden_channels,
-                num_towers=8,
                 lg_node_basis=lg_node_basis,
                 lg_edge_basis=lg_edge_basis,
                 emb_basis_global=emb_basis_global,
@@ -472,7 +467,6 @@ def run(
                 num_classes=num_tasks,
                 num_layers=num_layers,
                 hidden_final=hidden_channels,
-                num_towers=8,
                 emb_basis_global=emb_basis_global,
                 emb_basis_local=emb_basis_local,
                 emb_bottleneck=emb_bottleneck,
