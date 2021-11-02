@@ -297,20 +297,17 @@ def run(
     node_feat_dim = first_graph.x.shape[-1]
 
     if dataset_name == "ogbg-molhiv":
+        # dont conv_encode_edge unless its set in the config
         # binary, multiple tasks
         num_tasks = train_set.dataset.num_tasks
         task_type, eval_metric = (
             train_set.dataset.task_type,
             train_set.dataset.eval_metric,
         )
-    elif dataset_name == "ZINC":
+    elif dataset_name in ("ZINC", "QM9"):
+        # regression, single task
         conv_encode_edge = True
         num_tasks = 1
-        task_type = "regression"
-        eval_metric = "mae"
-    elif dataset_name == "QM9":
-        conv_encode_edge = True
-        num_tasks = first_graph.y.shape[-1]
         task_type = "regression"
         eval_metric = "mae"
 
