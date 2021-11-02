@@ -316,12 +316,11 @@ def run(
 
     first_graph = train_list[0]
     print("First train graph:", first_graph)
+    node_feat_dim = first_graph.x.shape[-1]
 
     if dataset_name == "ogbg-molhiv":
         # binary, multiple tasks
         num_tasks = train_set.dataset.num_tasks
-        multi_class = False
-        node_feat_dim = first_graph.x.shape[-1]
         task_type, eval_metric = (
             train_set.dataset.task_type,
             train_set.dataset.eval_metric,
@@ -329,19 +328,15 @@ def run(
     elif dataset_name == "ZINC":
         conv_encode_edge = True
         num_tasks = 1
-        multi_class = False
         task_type = "regression"
         eval_metric = "mae"
-        node_feat_dim = first_graph.x.shape[-1]
     elif dataset_name == "QM9":
         conv_encode_edge = True
         num_tasks = first_graph.y.shape[-1]
-        multi_class = False
         task_type = "regression"
         eval_metric = "mae"
-        node_feat_dim = first_graph.x.shape[-1]
 
-    print(f"Multi class?: {multi_class}, Num tasks: {num_tasks}")
+    print(f"Num tasks: {num_tasks}")
     print(f"Task type: {task_type}")
     print(f"Eval metric: {eval_metric}")
 
@@ -520,7 +515,6 @@ def run(
         task_type,
         eval_metric,
         criterion,
-        multi_class,
         warmup=scheduler_warmup,
         scheduler=scheduler,
         min_lr=min_lr,

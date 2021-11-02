@@ -15,7 +15,6 @@ def train_eval_model(
     task_type,
     eval_metric,
     criterion,
-    multi_class,
     warmup=None,
     scheduler=None,
     min_lr=None,
@@ -43,13 +42,12 @@ def train_eval_model(
             model,
             device,
             loaders["train"],
-            multi_class,
             criterion,
             evaluator,
             optim,
         )
         val_loss, val_result = step(
-            False, model, device, loaders["val"], multi_class, criterion, evaluator
+            False, model, device, loaders["val"], criterion, evaluator
         )
 
         if scheduler:
@@ -85,7 +83,7 @@ def train_eval_model(
         ):
             best_val = val_metric
             final_test = evaluate(
-                model, device, loaders["test"], evaluator, multi_class
+                model, device, loaders["test"], evaluator,
             )[eval_metric]
 
             print(f"Val metric improved, test metric now: {final_test:.4f}")
@@ -100,7 +98,6 @@ def step(
     model,
     device,
     loader,
-    multi_class,
     criterion,
     evaluator,
     optimizer=None,
@@ -127,16 +124,8 @@ def step(
         # if there are multiple targets, make it a single list of indices
         is_labeled = (batch.y == batch.y).all(dim=1)
 
-        # multi class, single prediction per graph
-        if multi_class:
-            # 1-dim index
-            is_labeled = is_labeled.view(-1)
-            # 1-dim target
-            y = batch.y[is_labeled].view(-1)
-        else:
-            # can have multiple tasks here
-            # TODO: dataset-specific way of handling?
-            y = batch.y[is_labeled].to(torch.float32).view(batch.y.shape)
+        # can have multiple tasks here
+        y = batch.y[is_labeled].to(torch.float32).view(batch.y.shape)
 
         # select only these predictions
         pred = model(batch)
@@ -146,17 +135,10 @@ def step(
             loss.backward()
             optimizer.step()
 
-        # update y lists for evaluation
-        if multi_class:
-            # target is (N, 1)
-            y_eval = batch.y.view(-1, 1)
-            # take argmax over classes to get the prediction
-            pred_eval = torch.argmax(pred, dim=1).view(-1, 1)
-        else:
-            # target is same shape as pred
-            y_eval = batch.y.view(pred.shape)
-            # pred is unchanged
-            pred_eval = pred
+        # target is same shape as pred
+        y_eval = batch.y.view(pred.shape)
+        # pred is unchanged
+        pred_eval = pred
 
         y_true.append(y_eval.detach().cpu())
         y_pred.append(pred_eval.detach().cpu())
@@ -172,7 +154,7 @@ def step(
 
 
 @torch.no_grad()
-def evaluate(model, device, loader, evaluator, multi_class):
+def evaluate(model, device, loader, evaluator):
     model.eval()
     y_true = []
     y_pred = []
@@ -186,15 +168,9 @@ def evaluate(model, device, loader, evaluator, multi_class):
         else:
             pred = model(batch)
 
-            if multi_class:
-                # target is (N, 1)
-                y = batch.y.view(-1, 1)
-                # take argmax over classes to get the prediction
-                pred = torch.argmax(pred, dim=1).view(-1, 1)
-            else:
-                # target is same shape as pred
-                y = batch.y.view(pred.shape)
-                # pred is unchanged
+            # target is same shape as pred
+            y = batch.y.view(pred.shape)
+            # pred is unchanged
 
             y_true.append(y.detach().cpu())
             y_pred.append(pred.detach().cpu())
