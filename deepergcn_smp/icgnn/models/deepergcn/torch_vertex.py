@@ -1,7 +1,5 @@
-import torch
-from ogb.graphproppred.mol_encoder import BondEncoder
 from .torch_nn import MLP
-from .torch_message import GenMessagePassing, MsgNorm
+from .torch_message import GenMessagePassing
 
 from torch.nn import Linear, Sequential, Identity
 
@@ -16,16 +14,6 @@ class GENConv_Linegraph(GenMessagePassing):
         self,
         in_dim,
         emb_dim,
-        aggr="softmax",
-        t=1.0,
-        learn_t=False,
-        p=1.0,
-        learn_p=False,
-        msg_norm=False,
-        learn_msg_scale=True,
-        norm="batch",
-        mlp_layers=2,
-        mlp_act="relu",
         lg_node_basis=None,
         lg_edge_basis=None,
         emb_basis_global=True,
@@ -33,16 +21,9 @@ class GENConv_Linegraph(GenMessagePassing):
         emb_bottleneck=False,
     ):
 
-        super().__init__(aggr=aggr, t=t, learn_t=learn_t, p=p, learn_p=learn_p)
+        super().__init__()
 
-        channels_list = [in_dim]
-
-        for _ in range(mlp_layers - 1):
-            channels_list.append(in_dim * 2)
-
-        channels_list.append(emb_dim)
-
-        self.mlp = MLP(channels=channels_list, norm=norm, last_lin=False, act=mlp_act)
+        self.mlp = MLP(channels=[in_dim, emb_dim])
 
         if emb_basis_local:
             # has the basis been embedded to the bottleneck globally?
@@ -76,10 +57,6 @@ class GENConv_Linegraph(GenMessagePassing):
         self.msg_emb2 = Linear(emb_dim, emb_dim, bias=False)
         self.msg_emb3 = Linear(emb_dim, emb_dim, bias=False)
 
-        self.msg_norm = (
-            MsgNorm(learn_msg_scale=learn_msg_scale) if msg_norm else Identity()
-        )
-
     def forward(self, x, edge_index, node_basis, edge_basis):
         """
         Pass the whole linegraph through the layer
@@ -92,7 +69,6 @@ class GENConv_Linegraph(GenMessagePassing):
         m = self.propagate(
             edge_index, x=x, node_basis=node_basis, edge_basis=edge_basis
         )
-        m = self.msg_norm(m)
         # skip connection
         h = x + m
         # embed with MLP
@@ -130,34 +106,15 @@ class GENConv(GenMessagePassing):
         self,
         in_dim,
         emb_dim,
-        aggr="softmax",
-        t=1.0,
-        learn_t=False,
-        p=1.0,
-        learn_p=False,
-        msg_norm=False,
-        learn_msg_scale=True,
         edge_feat_dim=None,
-        norm="batch",
-        mlp_layers=2,
-        mlp_act="relu",
         emb_basis_global=True,
         emb_basis_local=True,
         emb_bottleneck=4,
     ):
 
-        super(GENConv, self).__init__(
-            aggr=aggr, t=t, learn_t=learn_t, p=p, learn_p=learn_p
-        )
+        super(GENConv, self).__init__()
 
-        channels_list = [in_dim]
-
-        for _ in range(mlp_layers - 1):
-            channels_list.append(in_dim * 2)
-
-        channels_list.append(emb_dim)
-
-        self.mlp = MLP(channels=channels_list, norm=norm, last_lin=False, act=mlp_act)
+        self.mlp = MLP(channels=[in_dim, emb_dim])
 
         if emb_basis_local:
             # has the basis been embedded to the bottleneck globally?
@@ -183,10 +140,6 @@ class GENConv(GenMessagePassing):
         self.msg_emb1 = Linear(emb_dim, emb_dim)
         self.msg_emb2 = Linear(emb_dim, emb_dim, bias=False)
 
-        self.msg_norm = (
-            MsgNorm(learn_msg_scale=learn_msg_scale) if msg_norm else Identity()
-        )
-
     def forward(self, x, edge_index, edge_attr):
         """
         x: input node embedding at this layer
@@ -194,7 +147,6 @@ class GENConv(GenMessagePassing):
         edge_attr: usual (may include the distance basis)
         """
         m = self.propagate(edge_index, x=x, edge_attr=edge_attr)
-        m = self.msg_norm(m)
         h = x + m
         out = self.mlp(h)
 

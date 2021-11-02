@@ -2,10 +2,9 @@ import torch
 import torch_scatter
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool
+from torch_geometric.nn import global_mean_pool
 
 from .torch_vertex import GENConv_Linegraph
-from .torch_nn import norm_layer
 
 
 class DeeperGCN_LineGraph(torch.nn.Module):
@@ -24,19 +23,8 @@ class DeeperGCN_LineGraph(torch.nn.Module):
         num_layers=7,
         dropout=0.2,
         hidden_channels=256,
-        gcn_aggr="softmax",
-        learn_t=True,
-        t=1.0,
-        learn_p=False,
-        p=1,
-        msg_norm=False,
-        learn_msg_scale=False,
-        norm="batch",
-        mlp_layers=1,
-        graph_pooling="mean",
         node_attr_dim=None,
         edge_attr_dim=None,
-        mlp_act="relu",
         lg_node_basis=4,
         lg_edge_basis=4,
         # options for distance and angle basis
@@ -53,12 +41,6 @@ class DeeperGCN_LineGraph(torch.nn.Module):
         self.msg_emb_layer = nn.Linear(
             2 * hidden_channels + edge_attr_dim + lg_node_basis, hidden_channels
         )
-
-        self.pool = {
-            "sum": global_add_pool,
-            "mean": global_mean_pool,
-            "max": global_max_pool,
-        }[graph_pooling]
 
         # nodes and edges have extra basis = distances, angles
         if emb_basis_global:
@@ -98,16 +80,6 @@ class DeeperGCN_LineGraph(torch.nn.Module):
             gcn = GENConv_Linegraph(
                 hidden_channels,
                 hidden_channels,
-                aggr=gcn_aggr,
-                t=t,
-                learn_t=learn_t,
-                p=p,
-                learn_p=learn_p,
-                msg_norm=msg_norm,
-                learn_msg_scale=learn_msg_scale,
-                norm=norm,
-                mlp_layers=mlp_layers,
-                mlp_act=mlp_act,
                 lg_node_basis=lg_node_basis,
                 lg_edge_basis=lg_edge_basis,
                 emb_basis_global=emb_basis_global,
@@ -115,7 +87,7 @@ class DeeperGCN_LineGraph(torch.nn.Module):
                 emb_bottleneck=emb_bottleneck,
             )
             self.gcns.append(gcn)
-            self.norms.append(norm_layer(norm, hidden_channels))
+            self.norms.append(nn.BatchNorm1d(hidden_channels, affine=True))
 
         # final prediction layer
         self.graph_pred_linear = torch.nn.Linear(hidden_channels, num_tasks)
@@ -157,6 +129,6 @@ class DeeperGCN_LineGraph(torch.nn.Module):
             h, batch.edge_index_g[1], dim=0, dim_size=batch.x_g.shape[0]
         )  # this is graph.num_nodes
 
-        h_graph = self.pool(final_node_emb, batch.batch)
+        h_graph = global_mean_pool(final_node_emb, batch.batch)
 
         return self.graph_pred_linear(h_graph)

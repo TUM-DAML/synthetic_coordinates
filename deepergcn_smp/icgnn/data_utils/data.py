@@ -21,6 +21,7 @@ from icgnn.transforms.zinc import OneHotNodeEdgeFeatures, ZINC_Reshape_Target
 
 DATA_PATH = "data"
 
+
 def get_transformed_dataset(dataset):
     """
     Iterate over a torch Dataset so that transforms are applied

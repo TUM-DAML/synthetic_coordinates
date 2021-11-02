@@ -111,18 +111,6 @@ def config():
     dropout = 0.5
     conv_encode_edge = False
     hidden_channels = 256
-    gcn_aggr = "mean"
-    learn_t = True
-    t = 0.1
-    learn_p = False
-    p = 1
-    msg_norm = False
-    learn_msg_scale = False
-    norm = "batch"
-    mlp_layers = 1
-    graph_pooling = "mean"
-    quick_run = False
-    mlp_act = "relu"
     qm9_target_ndx = None
     max_hours = None
     log = False
@@ -395,16 +383,6 @@ def run(
                 num_layers,
                 dropout,
                 hidden_channels,
-                gcn_aggr,
-                learn_t,
-                t,
-                learn_p,
-                p,
-                msg_norm,
-                learn_msg_scale,
-                norm,
-                mlp_layers,
-                graph_pooling,
                 node_attr_dim=node_feat_dim,
                 edge_attr_dim=edge_attr_dim,
                 mlp_act=mlp_act,
@@ -421,16 +399,6 @@ def run(
                 dropout,
                 conv_encode_edge,
                 hidden_channels,
-                gcn_aggr,
-                learn_t,
-                t,
-                learn_p,
-                p,
-                msg_norm,
-                learn_msg_scale,
-                norm,
-                mlp_layers,
-                graph_pooling,
                 node_feat_dim=node_feat_dim,
                 edge_feat_dim=edge_attr_dim,
                 mol_data=mol_data,

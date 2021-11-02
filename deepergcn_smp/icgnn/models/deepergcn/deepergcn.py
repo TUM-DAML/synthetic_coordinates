@@ -1,10 +1,9 @@
 import torch, torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool
+from torch_geometric.nn import global_mean_pool
 
 from ogb.graphproppred.mol_encoder import AtomEncoder, BondEncoder
 from .torch_vertex import GENConv
-from .torch_nn import norm_layer
 
 
 class DeeperGCN(torch.nn.Module):
@@ -15,20 +14,9 @@ class DeeperGCN(torch.nn.Module):
         dropout=0.2,
         conv_encode_edge=False,
         hidden_channels=256,
-        gcn_aggr="softmax",
-        learn_t=True,
-        t=1.0,
-        learn_p=False,
-        p=1,
-        msg_norm=False,
-        learn_msg_scale=False,
-        norm="batch",
-        mlp_layers=1,
-        graph_pooling="mean",
         node_feat_dim=None,
         edge_feat_dim=None,
         mol_data=True,
-        mlp_act="relu",
         # embedding options
         # embed the basis globally - once for the whole network
         emb_basis_global=True,
@@ -45,10 +33,6 @@ class DeeperGCN(torch.nn.Module):
         # molhiv dataset
         self.mol_data = mol_data
         self.num_tasks = num_tasks
-
-        self.learn_t = learn_t
-        self.learn_p = learn_p
-        self.msg_norm = msg_norm
 
         if self.conv_encode_edge:
             # encode the edges once initially
@@ -83,37 +67,20 @@ class DeeperGCN(torch.nn.Module):
                 # in and out dims
                 hidden_channels,
                 hidden_channels,
-                # DeeperGCN params
-                aggr=gcn_aggr,
-                t=t,
-                learn_t=self.learn_t,
-                p=p,
-                learn_p=self.learn_p,
-                msg_norm=self.msg_norm,
-                learn_msg_scale=learn_msg_scale,
                 edge_feat_dim=edge_feat_dim,
-                norm=norm,
-                mlp_layers=mlp_layers,
-                mlp_act=mlp_act,
                 # our params
                 emb_basis_global=emb_basis_global,
                 emb_basis_local=emb_basis_local,
                 emb_bottleneck=emb_bottleneck,
             )
             self.gcns.append(gcn)
-            self.norms.append(norm_layer(norm, hidden_channels))
+            self.norms.append(nn.BatchNorm1d(hidden_channels, affine=True))
 
         # molecule data?
         if mol_data:
             self.atom_encoder = AtomEncoder(emb_dim=hidden_channels)
         else:
             self.node_features_encoder = torch.nn.Linear(node_feat_dim, hidden_channels)
-
-        self.pool = {
-            "sum": global_add_pool,
-            "mean": global_mean_pool,
-            "max": global_max_pool,
-        }[graph_pooling]
 
         self.graph_pred_linear = torch.nn.Linear(hidden_channels, self.num_tasks)
 
@@ -149,6 +116,6 @@ class DeeperGCN(torch.nn.Module):
         h = self.norms[self.num_layers - 1](h)
         h = F.dropout(h, p=self.dropout, training=self.training)
 
-        h_graph = self.pool(h, input_batch.batch)
+        h_graph = global_mean_pool(h, input_batch.batch)
 
         return self.graph_pred_linear(h_graph)
