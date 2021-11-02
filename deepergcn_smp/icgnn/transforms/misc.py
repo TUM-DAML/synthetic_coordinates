@@ -1,5 +1,6 @@
 import torch
 
+
 class Finalize_Dist_Basis:
     def __init__(self):
         pass

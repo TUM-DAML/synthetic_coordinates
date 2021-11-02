@@ -83,7 +83,10 @@ def train_eval_model(
         ):
             best_val = val_metric
             final_test = evaluate(
-                model, device, loaders["test"], evaluator,
+                model,
+                device,
+                loaders["test"],
+                evaluator,
             )[eval_metric]
 
             print(f"Val metric improved, test metric now: {final_test:.4f}")

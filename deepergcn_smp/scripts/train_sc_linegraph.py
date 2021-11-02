@@ -19,7 +19,7 @@ result = run(
     seed=0,
     # our new features
     add_ppr_dist=False,
-    add_rdkit_dist='bounds_matrix_both',
+    add_rdkit_dist="bounds_matrix_both",
     linegraph_dist=True,
     linegraph_angle=True,
     linegraph_angle_mode="center_both",

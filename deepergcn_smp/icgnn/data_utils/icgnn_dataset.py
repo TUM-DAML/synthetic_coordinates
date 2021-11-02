@@ -1,6 +1,6 @@
-'''
+"""
 Class that contains a linegraph and the original graph
-'''
+"""
 
 from functools import partial
 
