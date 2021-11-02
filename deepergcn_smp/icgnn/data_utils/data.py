@@ -19,7 +19,7 @@ from icgnn.data_utils.io_utils import read_jsonl
 from icgnn.data_utils.qm9 import qm9_gnnfilm_to_pyg, QM9_GNNFilm
 from icgnn.transforms.zinc import OneHotNodeEdgeFeatures, ZINC_Reshape_Target
 
-DATA_PATH = "data"
+DATA_PATH = "../data"
 
 
 def get_transformed_dataset(dataset):

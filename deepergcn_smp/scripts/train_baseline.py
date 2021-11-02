@@ -38,20 +38,10 @@ result = run(
     mlp_act="relu",
     dropout=0.2,
     conv_encode_edge=True,
-    gcn_aggr="softmax",
-    learn_t=True,
-    t=0.1,
-    learn_p=False,
-    p=1,
-    msg_norm=False,
-    learn_msg_scale=False,
-    norm="batch",
-    mlp_layers=1,
-    graph_pooling="mean",
     # target to predict in QM9
     qm9_target_ndx=7,
     # run on a subset of data
-    quick_run=False,
+    quick_run=True,
     # max time to run
     max_hours=144,
     # log metrics and losses to tensorboard

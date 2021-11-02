@@ -277,7 +277,7 @@ def run(
     print(f"Using dataset:\t\t{dataset_name}")
 
     train_set, val_set, test_set = get_graphcls_dataset(
-        dataset_name, icgnn=False, transform=transform, quick_run=quick_run
+        dataset_name, transform=transform, quick_run=quick_run
     )
 
     # Subset objects
