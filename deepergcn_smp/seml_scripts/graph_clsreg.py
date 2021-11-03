@@ -153,7 +153,6 @@ def run(
     emb_basis_local,
     emb_bottleneck,
     # model params
-    mlp_act,
     num_layers,
     dropout,
     conv_encode_edge,
@@ -372,7 +371,6 @@ def run(
                 hidden_channels,
                 node_attr_dim=node_feat_dim,
                 edge_attr_dim=edge_attr_dim,
-                mlp_act=mlp_act,
                 lg_node_basis=lg_node_basis,
                 lg_edge_basis=lg_edge_basis,
                 emb_basis_global=emb_basis_global,
@@ -389,7 +387,6 @@ def run(
                 node_feat_dim=node_feat_dim,
                 edge_feat_dim=edge_attr_dim,
                 mol_data=mol_data,
-                mlp_act=mlp_act,
                 emb_basis_global=emb_basis_global,
                 emb_basis_local=emb_basis_local,
                 emb_bottleneck=emb_bottleneck,
