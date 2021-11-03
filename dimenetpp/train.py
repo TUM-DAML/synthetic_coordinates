@@ -20,6 +20,11 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 tf.get_logger().setLevel("WARN")
 tf.autograph.set_verbosity(1)
 
+from sacred import Experiment
+import seml
+
+ex = Experiment()
+seml.setup_logger(ex)
 
 def run(
     model_name,
