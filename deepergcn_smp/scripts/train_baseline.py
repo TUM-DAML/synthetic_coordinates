@@ -34,14 +34,12 @@ result = run(
     # model params
     num_layers=12,
     hidden_channels=128,
-    # deepergcn model params
-    mlp_act="relu",
     dropout=0.2,
     conv_encode_edge=True,
     # target to predict in QM9
     qm9_target_ndx=7,
     # run on a subset of data
-    quick_run=True,
+    quick_run=False,
     # max time to run
     max_hours=144,
     # log metrics and losses to tensorboard
