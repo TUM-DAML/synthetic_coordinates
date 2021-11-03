@@ -1,4 +1,4 @@
-name: icgnn-gpu
+name: deepergcn_smp
 channels:
   - rdkit
   - pytorch-lts

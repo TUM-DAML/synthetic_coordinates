@@ -1,4 +1,4 @@
-name: dimenet
+name: dimenetpp
 channels:
   - conda-forge
   - defaults
