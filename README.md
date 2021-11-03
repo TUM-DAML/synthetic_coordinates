@@ -20,7 +20,7 @@ conda env create -f environment.yml
 ### Datasets
 First set the `DATA_PATH` for all datasets in `deepergcn_smp/icgnn/data_utils/data.py`.
 We use the `ogbg-molhiv` and `ZINC` datasets from [Pytorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/) which are automatically downloaded.
-The QM9 dataset is provided in the `datasets` folder. 
+The QM9 dataset is provided in the `data` folder. 
 
 ## Training
 Reference training scripts with the best hyperparameters are included
