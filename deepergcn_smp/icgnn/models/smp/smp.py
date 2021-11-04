@@ -31,7 +31,7 @@ class SMP(torch.nn.Module):
         self.num_classes = num_classes
 
         self.no_prop = GraphExtractor(
-            in_features=num_input_features, out_features=hidden_final, use_x=False
+            in_features=num_input_features, out_features=hidden_final
         )
         hidden = 32
         self.initial_lin = nn.Linear(num_input_features, hidden)
@@ -63,18 +63,14 @@ class SMP(torch.nn.Module):
                     num_towers=8,
                     out_features=hidden,
                     edge_features=hidden,
-                    use_x=False,
-                    use_edge_features=True,
                 )
             )
-            self.batch_norm_list.append(BatchNorm(hidden, False) if i > 0 else None)
+            self.batch_norm_list.append(BatchNorm(hidden) if i > 0 else None)
 
         # Feature extractors
         self.feature_extractor = GraphExtractor(
             in_features=hidden,
             out_features=hidden_final,
-            use_x=False,
-            simplified=False,
         )
 
         # Last layers
@@ -155,7 +151,7 @@ class SMP_LineGraph(torch.nn.Module):
         lg_input_features = hidden_final + 1
         self.initial_lin = nn.Linear(lg_input_features, hidden)
         self.no_prop = GraphExtractor(
-            in_features=lg_input_features, out_features=hidden_final, use_x=False
+            in_features=lg_input_features, out_features=hidden_final
         )
 
         # create one global emb layer for the dist basis
@@ -203,18 +199,14 @@ class SMP_LineGraph(torch.nn.Module):
                     num_towers=8,
                     out_features=hidden,
                     edge_features=hidden,
-                    use_x=False,
-                    use_edge_features=True,
                 )
             )
-            self.batch_norm_list.append(BatchNorm(hidden, False) if i > 0 else None)
+            self.batch_norm_list.append(BatchNorm(hidden) if i > 0 else None)
 
         # Feature extractors
         self.feature_extractor = GraphExtractor(
             in_features=hidden,
             out_features=hidden_final,
-            use_x=False,
-            simplified=False,
         )
 
         self.after_conv = nn.Linear(hidden_final, hidden_final)

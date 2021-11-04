@@ -41,19 +41,15 @@ def kaiming_init_with_gain(
 
 
 class BatchNorm(nn.Module):
-    def __init__(self, channels: int, use_x: bool):
+    def __init__(self, channels: int):
         super().__init__()
         self.bn = nn.BatchNorm1d(channels)
-        self.use_x = use_x
 
     def reset_parameters(self):
         self.bn.reset_parameters()
 
     def forward(self, u):
-        if self.use_x:
-            return self.bn(u)
-        else:
-            return self.bn(u.transpose(1, 2)).transpose(1, 2)
+        return self.bn(u.transpose(1, 2)).transpose(1, 2)
 
 
 class EdgeCounter(MessagePassing):
@@ -86,18 +82,6 @@ class Linear(nn.Module):
         return self.lin.forward(x)
 
 
-class XtoX(Linear):
-    def forward(self, x, batch_info: dict = None):
-        return self.lin.forward(x)
-
-
-class XtoGlobal(Linear):
-    def forward(self, x: Tensor, batch_info: dict, method="mean"):
-        """x: (num_nodes, in_features)."""
-        g = pooling(x, batch_info, method)  # bs, N, in_feat or bs, in_feat
-        return self.lin.forward(g)
-
-
 class EntrywiseU(nn.Module):
     def __init__(self, in_features: int, out_features: int, num_towers=None):
         super().__init__()
@@ -113,23 +97,6 @@ class EntrywiseU(nn.Module):
         u = self.lin1(u)
         return u.transpose(1, 2)
 
-
-class EntryWiseX(nn.Module):
-    def __init__(
-        self, in_features: int, out_features: int, n_groups=None, residual=False
-    ):
-        super().__init__()
-        self.residual = residual
-        if n_groups is None:
-            n_groups = in_features
-        self.lin1 = torch.nn.Conv1d(
-            in_features, out_features, kernel_size=1, groups=n_groups, bias=False
-        )
-
-    def forward(self, x, batch_info=None):
-        """x: N x  channels."""
-        new_x = self.lin1(x.unsqueeze(-1)).squeeze()
-        return (new_x + x) if self.residual else new_x
 
 
 class UtoU(nn.Module):
@@ -213,45 +180,13 @@ class UtoGlobal(nn.Module):
         return out1 + out2
 
 
-class NodeExtractor(nn.Module):
-    def __init__(self, in_features_u: int, out_features_u: int):
-        super().__init__()
-        # Extract from U with a Deep set
-        self.lin1_u = nn.Linear(in_features_u, in_features_u)
-        self.lin2_u = nn.Linear(in_features_u, in_features_u)
-        self.combine1 = nn.Linear(3 * in_features_u, out_features_u)
-
-    def forward(self, x: Tensor, u: Tensor, batch_info: dict):
-        """u: (num_nodes, num_nodes, in_features).
-        output: (num_nodes, out_feat).
-        this method can probably be made more efficient.
-        """
-        # Extract u
-        new_u = self.lin2_u(torch.relu(self.lin1_u(u)))
-        # Aggregation
-        # a. Extract the value in self
-        index_tensor = batch_info["coloring"][:, :, None].expand(
-            u.shape[0], 1, u.shape[-1]
-        )
-        x1 = torch.gather(new_u, 1, index_tensor)
-        x1 = x1[:, 0, :]
-        # b. Mean over the line
-        x2 = torch.sum(new_u / batch_info["n_batch"], dim=1)  # num_nodes x in_feat
-        # c. Max over the line
-        x3 = torch.max(new_u, dim=1)[0]  # num_nodes x out_feat
-        # Combine
-        x_full = torch.cat((x1, x2, x3), dim=1)
-        out = self.combine1(x_full)
-        return out
-
 
 class GraphExtractor(nn.Module):
     def __init__(
-        self, in_features: int, out_features: int, use_x: bool, simplified=False
+        self, in_features: int, out_features: int
     ):
         super().__init__()
-        self.use_x, self.simplified = use_x, simplified
-        self.extractor = (XtoGlobal if self.use_x else UtoGlobal)(
+        self.extractor = UtoGlobal(
             in_features, out_features, True, 1
         )
         self.lin = nn.Linear(out_features, out_features)
@@ -262,7 +197,5 @@ class GraphExtractor(nn.Module):
 
     def forward(self, u: Tensor, batch_info: dict):
         out = self.extractor(u, batch_info)
-        if self.simplified:
-            return out
         out = out + self.lin(F.relu(out))
         return out

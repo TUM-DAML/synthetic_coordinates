@@ -55,11 +55,7 @@ class SMPLayer(MessagePassing):
             edge_attr=edge_attr,
             dist_basis=dist_basis,
         )
-        new_u /= (
-            batch_info["average_edges"][:, :, 0]
-            if self.use_x
-            else batch_info["average_edges"]
-        )
+        new_u /= batch_info["average_edges"]
         return new_u
 
     def message(self, u_j, u1_i, u2_j, edge_attr, dist_basis_i=None):
@@ -71,9 +67,8 @@ class SMPLayer(MessagePassing):
             # remove the extra dim from dist basis
             edge_attr = edge_attr * dist_basis_i.squeeze()
 
-        edge_feat = self.edge_nn(edge_attr) if self.use_edge_features else 0
-        if not self.use_x:
-            edge_feat = edge_feat.unsqueeze(1)
+        edge_feat = self.edge_nn(edge_attr)
+        edge_feat = edge_feat.unsqueeze(1)
         order2 = self.order2(torch.relu(u1_i + u2_j + edge_feat))
         u_j = u_j + order2
         return u_j
