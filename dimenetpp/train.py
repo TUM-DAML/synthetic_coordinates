@@ -26,6 +26,7 @@ import seml
 ex = Experiment()
 seml.setup_logger(ex)
 
+
 def run(
     model_name,
     emb_size,

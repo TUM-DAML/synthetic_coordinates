@@ -18,9 +18,9 @@ res = run(
     num_dense_output=3,
     cutoff=2.5,
     # distance - ppr or rdkit or both
-    # dist={'type': 'ppr_rdkit_bounds', 'alpha': 0.15},
+    dist={"type": "ppr_rdkit_bounds", "alpha": 0.15},
     # dist={'type': 'rdkit_bounds'},
-    dist={"type": "ppr", "alpha": 0.15},
+    # dist={"type": "ppr", "alpha": 0.15},
     dataset="../data/qm9",
     num_train=None,
     num_valid=None,
@@ -51,6 +51,6 @@ res = run(
     ],
     comment="DimeNet++",
     logdir="logs",
-    quick_run=False,
+    quick_run=True,
     ablation=None,
 )
