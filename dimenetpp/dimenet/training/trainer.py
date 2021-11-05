@@ -72,7 +72,7 @@ class Trainer:
     def get_lr(self):
         return self.opt._decayed_lr(tf.float32)
 
-    @tf.function
+    # @tf.function
     def train_on_batch(self, dataset_iter, metrics):
         inputs, targets = next(dataset_iter)
         with tf.GradientTape() as tape:
@@ -87,7 +87,7 @@ class Trainer:
 
         return loss
 
-    @tf.function
+    # @tf.function
     def test_on_batch(self, dataset_iter, metrics):
         inputs, targets = next(dataset_iter)
         preds = self.model(inputs, training=False)
@@ -100,7 +100,7 @@ class Trainer:
 
         return loss
 
-    @tf.function
+    # @tf.function
     def predict_on_batch(self, dataset_iter, metrics):
         inputs, targets = next(dataset_iter)
         preds = self.model(inputs, training=False)

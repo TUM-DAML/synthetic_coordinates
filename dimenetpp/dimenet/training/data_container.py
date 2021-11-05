@@ -20,7 +20,6 @@ class DataContainer:
         print(f"Use ablation: {self.ablation}")
         # read the GNN FILM dataset
         self.data = list(read_jsonl(filename))
-        print(filename, len(self.data))
         if subset:
             print("Selecting a subset of data")
             self.data = self.data[:16]

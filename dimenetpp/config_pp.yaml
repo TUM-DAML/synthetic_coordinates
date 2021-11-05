@@ -1,3 +1,4 @@
+# used for inference
 model_name: "dimenet++"
 
 emb_size: 128
@@ -18,7 +19,7 @@ num_dense_output: 3
 num_train: null
 num_valid: null
 data_seed: 42
-dataset: "../data"
+dataset: "../data/qm9"
 logdir: "logs"
 
 num_steps: 3000000
@@ -36,17 +37,16 @@ restart: None
 comment: "final"
 
 dist:
-  # type can be rdkit_bounds/ppr/ppr_rdkit_bounds
-  type: ppr_rdkit_bounds
-  alpha: 0.15
+  type: rdkit_bounds
+  # type: ppr
+  # type: ppr_rdkit_bounds
+  # alpha: 0.15
+ablation: const_angle
 
-# 'zeros' for mu, homo, lumo, and zpve; 
-targets: ['alpha', 'homo', 'lumo', 'gap', 'zpve']
+# choices: ['alpha', 'homo', 'lumo', 'gap', 'zpve']
+targets: ['homo']  
 output_init: 'zeros'  
 
-# 'GlorotOrthogonal' for alpha, R2, U0, U, H, G, and Cv
-targets: ['r2' 'U0', 'U', 'H', 'G', 'Cv']
+# choices: ['r2' 'U0', 'U', 'H', 'G', 'Cv']
+targets: ['U0'] 
 output_init: 'GlorotOrthogonal'  
-
-
-ablation: null

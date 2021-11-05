@@ -1,14 +1,14 @@
-from train import run
+from train_seml import run
 
 res = run(
     model_name="dimenet++",
     # emb sizes
-    emb_size=4,
-    out_emb_size=4,
-    int_emb_size=4,
-    basis_emb_size=4,
+    emb_size=128,
+    out_emb_size=256,
+    int_emb_size=64,
+    basis_emb_size=8,
     # model size
-    num_blocks=1,
+    num_blocks=4,
     # rbf and sbf embs
     num_radial=12,
     num_spherical=12,
@@ -20,7 +20,7 @@ res = run(
     # distance - ppr or rdkit or both
     dist={"type": "ppr_rdkit_bounds", "alpha": 0.15},
     # dist={'type': 'rdkit_bounds'},
-    # dist={"type": "ppr", "alpha": 0.15},
+    # dist={'type': 'ppr', 'alpha': 0.15},
     dataset="../data/qm9",
     num_train=None,
     num_valid=None,
@@ -36,21 +36,11 @@ res = run(
     save_interval=10000,
     restart=None,
     targets=[
-        "mu",
-        "alpha",
-        "homo",
-        "lumo",
-        "gap",
-        "r2",
-        "zpve",
-        "U0",
-        "U",
-        "H",
-        "G",
-        "Cv",
-    ],
+        "homo"
+    ],  # , 'alpha', 'homo', 'lumo', 'gap', 'r2', 'zpve', 'U0', 'U', 'H', 'G', 'Cv'],
     comment="DimeNet++",
-    logdir="logs",
+    logdir="/nfs/homedirs/yeshwant/dimenet_sc/logs",
     quick_run=True,
     ablation=None,
+    seed=0,
 )

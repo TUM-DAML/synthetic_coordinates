@@ -15,19 +15,31 @@ from dimenet.training.metrics import Metrics
 from dimenet.training.data_container import DataContainer
 from dimenet.training.data_provider import DataProvider
 
-# TensorFlow logging verbosity
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
-tf.get_logger().setLevel("WARN")
-tf.autograph.set_verbosity(1)
-
 from sacred import Experiment
 import seml
 
 ex = Experiment()
 seml.setup_logger(ex)
 
+# TensorFlow logging verbosity
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+tf.get_logger().setLevel("WARN")
+tf.autograph.set_verbosity(1)
 
+
+@ex.config
+def config():
+    overwrite = None
+    db_collection = None
+    if db_collection is not None:
+        ex.observers.append(
+            seml.create_mongodb_observer(db_collection, overwrite=overwrite)
+        )
+
+
+@ex.automain
 def run(
+    seed,
     model_name,
     emb_size,
     out_emb_size,
@@ -62,6 +74,9 @@ def run(
     quick_run=False,
     ablation=None,
 ):
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+
     if not quick_run:
         gpus = tf.config.experimental.list_physical_devices("GPU")
         for gpu in gpus:
@@ -247,6 +262,9 @@ def run(
         ckpt_restored = tf.train.latest_checkpoint(log_dir)
         if ckpt_restored is not None:
             ckpt.restore(ckpt_restored)
+
+        if ex.current_run is not None:
+            ex.current_run.info = {"directory": directory}
 
         # Training loop
         logging.info("Start training")
