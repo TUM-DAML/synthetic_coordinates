@@ -55,7 +55,9 @@ seml <collection> start
 The model is evaluated on the validation set during training, and the final test
 score is printed at the end of training. Logs with losses and metrics are written to Tensorboard,
 the unique experiment ID is printed to console as well as written to the SEML 
-database.
+database. You can also use the `results.ipynb` notebook to fetch results from the 
+SEML Database. Set the collection name and batch IDs in the notebook and run
+to fetch the required results.
 
 ### DimeNet++
 Checkpoints are saved to a uniquely named folder, this unique name is printed 
