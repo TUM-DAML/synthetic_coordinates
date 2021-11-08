@@ -32,7 +32,8 @@ We provide reference training scripts in the `scripts` folder for -
 1. baseline model with distance: bounds matrix (BM) or PPR: `python scripts/train_sc_basic.py`
 1. and linegraph with distance and angle using both BM and PPR: `python scripts/train_sc_linegraph.py`
 
-These can be modified to perform other ablations.
+These can be modified to perform other ablations, such as choosing any one of 
+the distance methods, or using only the distance on the linegraph.
 
 ### DimeNet++
 The model parameters and ablations can be configured in the training script. 
