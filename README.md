@@ -38,7 +38,6 @@ the distance methods, or using only the distance on the linegraph.
 ### DimeNet++
 The model parameters and ablations can be configured in the training script. 
 ```
-cd dimenetpp
 python run.py
 ```
 
@@ -50,11 +49,13 @@ seml <collection> add configs/graph_clsreg.yml
 seml <collection> start
 ```
 
+
 ## Evaluation
 ### DeeperGCN and SMP
 The model is evaluated on the validation set during training, and the final test
 score is printed at the end of training. Logs with losses and metrics are written to Tensorboard,
-the unique experiment ID is printed to console.
+the unique experiment ID is printed to console as well as written to the SEML 
+database.
 
 ### DimeNet++
 Checkpoints are saved to a uniquely named folder, this unique name is printed 
@@ -73,13 +74,13 @@ Our models achieve the following results as reported in the paper
 ### ogbg-molhiv
 | Model         |  Accuracy |
 | ------------------ | -------------- |
-| DeeperGCN   |          0.7674 +-0.0162       |
+| DeeperGCN   |          0.734+-0.014       |
 
 ### ZINC
 | Model         |  MAE |
 | ------------------ | -------------- |
-| DeeperGCN   |  0.1423 +- 0.0064 |
-| SMP   | 0.1263 +- 0.0039 |
+| DeeperGCN   |  0.142 +-0.006 |
+| SMP   | 0.108 +-0.003 |
 
 ### QM9
 | Model         |  Target | MAE |
