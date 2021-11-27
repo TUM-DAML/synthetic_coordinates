@@ -1,5 +1,6 @@
 data
 *.code-workspace
+*.swp
 
 logs/
 
@@ -12,6 +13,7 @@ logs/
 # Python
 __pycache__
 *.pyc
+*.egg-info
 
 # pytest
 .pytest_cache

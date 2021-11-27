@@ -1,42 +1,42 @@
 # Directional Message Passing on Molecular Graphs via Synthetic Coordinates
 
-This repository is the official implementation of 
+Reference implementation of synthetic coordinates and directional message passing for multiple GNNs, as proposed in
 
-**[Directional Message Passing on Molecular Graphs via Synthetic Coordinates](https://openreview.net/forum?id=ZRu0_3azrCd)**  
+**[Directional Message Passing on Molecular Graphs via Synthetic Coordinates](https://www.in.tum.de/daml/synthetic-coordinates/)**  
 by Johannes Klicpera, Chandan Yeshwanth, Stephan Günnemann  
 Published at NeurIPS 2021.
 
-The `deepergcn_smp` folder contains DeeperGCN and SMP implementations in torch, and 
-`dimenetpp` contains the Tensorflow implementation of Dimenet++.
+The `deepergcn_smp` folder contains DeeperGCN and SMP implementations in PyTorch, and 
+`dimenetpp` contains the TensorFlow implementation of DimeNet++ with synthetic coordinates.
 
 ## Requirements
 
-We use separate conda environments for DeeperGCN/SMP and dimenetpp. Use this
-command to create the respective environments
+We use separate Anaconda environments for DeeperGCN/SMP and DimeNet++. Use this
+command to create the respective environments for each folder
 ```
 conda env create -f environment.yml
 ```
 
 ### Datasets
-We use the `ogbg-molhiv` and `ZINC` datasets from [Pytorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/) which are automatically downloaded to the `data` folder.
-The QM9 dataset is provided in the `data` folder. 
+We use the `ogbg-molhiv` and `ZINC` datasets from [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/),
+which are automatically downloaded to the `data` folder. The QM9 dataset is provided in the `data` folder. 
 
 ## Training
-Reference training scripts with the best hyperparameters are included
+Reference training scripts with the best hyperparameters are included.
+
 ### DeeperGCN and SMP
-The model: `deepergcn` and `smp` can be configured in the script, as well as
-the dataset: `ogbg-molhiv`, `QM9`, `ZINC`. 
-We provide reference training scripts in the `scripts` folder for -
+You can select the model (`deepergcn` or `smp`) and the dataset (`ogbg-molhiv`, `QM9`, `ZINC`) in the script. 
+We provide reference training scripts in the `scripts` folder for:
 
 1. the baseline model: `python scripts/train_baseline.py`
-1. baseline model with distance: bounds matrix (BM) or PPR: `python scripts/train_sc_basic.py`
-1. and linegraph with distance and angle using both BM and PPR: `python scripts/train_sc_linegraph.py`
+2. baseline model with distance: bounds matrix (BM) or PPR: `python scripts/train_sc_basic.py`
+3. and linegraph with distance and angle using both BM and PPR: `python scripts/train_sc_linegraph.py`
 
 These can be modified to perform other ablations, such as choosing any one of 
 the distance methods, or using only the distance on the linegraph.
 
 ### DimeNet++
-The model parameters and ablations can be configured in the training script. 
+The model hyperparameters and ablations can be configured in the training script. 
 ```
 python run.py
 ```
@@ -49,7 +49,6 @@ seml <collection> add configs/graph_clsreg.yml
 seml <collection> start
 ```
 
-
 ## Evaluation
 ### DeeperGCN and SMP
 The model is evaluated on the validation set during training, and the final test
@@ -60,35 +59,26 @@ SEML Database. Set the collection name and batch IDs in the notebook and run
 to fetch the required results.
 
 ### DimeNet++
-Checkpoints are saved to a uniquely named folder, this unique name is printed 
+Checkpoints are saved to a uniquely named folder. This unique name is printed 
 during training and can be used in the `predict.ipynb` notebook to run 
-on the test set. The model configuration as used during training must be specified in `config_pp.yaml`. The same unique name can be used to view losses
-and metrics in Tensorboard.
-
-## Pre-trained Models
-
-Pretrained models will be added soon.
+on the test set. The model configuration used during training must be specified in `config_pp.yaml`.
+The same unique name can be used to view losses and metrics in Tensorboard.
 
 ## Results
 
-Our models achieve the following results as reported in the paper
-
-### ogbg-molhiv
-| Model         |  Accuracy |
-| ------------------ | -------------- |
-| DeeperGCN   |          0.734+-0.014       |
+Our models achieve the following results (as reported in the paper)
 
 ### ZINC
-| Model         |  MAE |
-| ------------------ | -------------- |
-| DeeperGCN   |  0.142 +-0.006 |
-| SMP   | 0.108 +-0.003 |
+| Model     | MAE           |
+| --------- | ------------- |
+| DeeperGCN | 0.142 +-0.006 |
+| SMP       | 0.109 +-0.004 |
 
-### QM9
-| Model         |  Target | MAE |
-| ------------------ | ----- | --------- |
-| DimeNet++   |     U0         |      28.7       |
-| DimeNet++   |     epsilon HOMO         |      61.7       |
+### Coordinate-free QM9
+| Model     | Target | MAE (meV) |
+| --------- | ------ | --------- |
+| DimeNet++ | U0     | 28.7      |
+| DimeNet++ | HOMO   | 61.7      |
 
 
 ## Contact
@@ -107,4 +97,4 @@ Please cite our paper if you use our method or code in your own work:
 ```
 
 ## License
-Hippocratic License
+Hippocratic License v2.1

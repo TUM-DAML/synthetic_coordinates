@@ -289,4 +289,3 @@ dependencies:
     - wrapt==1.11.2
     - xarray==0.17.0
     - yacs==0.1.8
-prefix: /nfs/students/yeshwant/envs/deepergcn_smp

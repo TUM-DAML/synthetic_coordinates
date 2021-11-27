@@ -19,7 +19,7 @@ def train_eval_model(
     scheduler=None,
     min_lr=None,
     max_hours=None,
-    logdir="logs/output",
+    logdir="logs/tensorboard",
 ):
     best_val = np.inf if task_type == "regression" else 0
 

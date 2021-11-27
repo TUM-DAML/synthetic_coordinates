@@ -39,7 +39,7 @@ res = run(
         "homo"
     ],  # , 'alpha', 'homo', 'lumo', 'gap', 'r2', 'zpve', 'U0', 'U', 'H', 'G', 'Cv'],
     comment="DimeNet++",
-    logdir="/nfs/homedirs/yeshwant/dimenet_sc/logs",
+    logdir="logs",
     quick_run=True,
     ablation=None,
     seed=0,

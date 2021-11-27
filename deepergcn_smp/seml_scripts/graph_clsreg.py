@@ -451,7 +451,7 @@ def run(
 
     logdir = None
     if log:
-        logdir = Path("runs") / str(uuid.uuid4())
+        logdir = Path("logs/tensorboard") / str(uuid.uuid4())
         print(f"Logging to: {logdir}")
         if ex.current_run is not None:
             ex.current_run.info = {"logdir": str(logdir)}
