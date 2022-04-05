@@ -5,8 +5,10 @@
 Reference implementation of synthetic coordinates and directional message passing for multiple GNNs, as proposed in
 
 **[Directional Message Passing on Molecular Graphs via Synthetic Coordinates](https://www.in.tum.de/daml/synthetic-coordinates/)**  
-by Johannes Klicpera, Chandan Yeshwanth, Stephan Günnemann  
+by Johannes Gasteiger, Chandan Yeshwanth, Stephan Günnemann  
 Published at NeurIPS 2021.
+
+Note that the author's name has changed from Johannes Klicpera to Johannes Gasteiger.
 
 The `deepergcn_smp` folder contains DeeperGCN and SMP implementations in PyTorch, and 
 `dimenetpp` contains the TensorFlow implementation of DimeNet++ with synthetic coordinates.
@@ -84,15 +86,15 @@ Our models achieve the following results (as reported in the paper)
 
 
 ## Contact
-Please contact klicpera@in.tum.de if you have any questions.
+Please contact j.gasteiger@in.tum.de if you have any questions.
 
 ## Cite
 Please cite our paper if you use our method or code in your own work:
 
 ```
-@inproceedings{klicpera_2021_dmp,
+@inproceedings{gasteiger_2021_dmp,
   title={Directional Message Passing on Molecular Graphs via Synthetic Coordinates},
-  author={Klicpera, Johannes and Yeshwanth, Chandan and G{\"u}nnemann, Stephan},
+  author={Gasteiger, Johannes and Yeshwanth, Chandan and G{\"u}nnemann, Stephan},
   booktitle = {Thirty-fifth Conference on Neural Information Processing Systems (NeurIPS)},
   year={2021},
 }

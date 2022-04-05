@@ -1,4 +1,4 @@
-__author__ = "Stefan Weißenberger and Johannes Klicpera"
+__author__ = "Stefan Weißenberger and Johannes Gasteiger"
 
 import os, os.path as osp
 
