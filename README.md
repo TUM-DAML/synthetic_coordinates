@@ -1,6 +1,6 @@
 # Directional Message Passing on Molecular Graphs via Synthetic Coordinates
 
-![Synthetic coordinates and GNN conversion to directional message passing.](https://www.in.tum.de/fileadmin/_processed_/a/8/csm_sc_figure_d484aa3e94.png)
+![Synthetic coordinates and GNN conversion to directional message passing.](https://user-images.githubusercontent.com/9202783/208929605-1bcc1ae9-ecd3-47bb-8829-877c5a2dc0fb.png)
 
 Reference implementation of synthetic coordinates and directional message passing for multiple GNNs, as proposed in
 
