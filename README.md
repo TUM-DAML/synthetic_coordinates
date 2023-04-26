@@ -4,7 +4,7 @@
 
 Reference implementation of synthetic coordinates and directional message passing for multiple GNNs, as proposed in
 
-**[Directional Message Passing on Molecular Graphs via Synthetic Coordinates](https://www.in.tum.de/daml/synthetic-coordinates/)**  
+**[Directional Message Passing on Molecular Graphs via Synthetic Coordinates](https://www.cs.cit.tum.de/daml/synthetic-coordinates/)**  
 by Johannes Gasteiger, Chandan Yeshwanth, Stephan Günnemann  
 Published at NeurIPS 2021.
 
